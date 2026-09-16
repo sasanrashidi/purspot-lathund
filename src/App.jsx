@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { categories, devices, softposSteps, softposFeatures } from './data'
+import { categories, devices, floCategories, floDevices, brands, softposSteps, softposFeatures } from './data'
 
-const g = {
-  body: '#2a5142',
-  stroke: '#96dac1',
-  screen: '#69cba7',
-  dark: '#1f3c32'
-}
+function DeviceIcon({ category, palette }) {
+  const g = palette || { body: '#2a5142', stroke: '#96dac1', screen: '#69cba7', dark: '#1f3c32' }
 
-function DeviceIcon({ category }) {
   if (category === 'Expresskassa') {
     return (
       <svg viewBox="0 0 140 140" width="140" height="140">
@@ -21,7 +16,7 @@ function DeviceIcon({ category }) {
       </svg>
     )
   }
-  if (category === 'Kassasystem') {
+  if (category === 'Kassasystem' || category === 'Kassadator') {
     return (
       <svg viewBox="0 0 140 140" width="140" height="140">
         <rect x="15" y="18" width="95" height="62" rx="5" fill={g.body} stroke={g.stroke} strokeWidth="1.5" />
@@ -44,6 +39,77 @@ function DeviceIcon({ category }) {
         <rect x="92" y="55" width="26" height="18" rx="3" fill={g.screen} />
         <rect x="20" y="88" width="100" height="4" rx="2" fill={g.stroke} opacity="0.6" />
         <rect x="20" y="95" width="100" height="4" rx="2" fill={g.screen} opacity="0.6" />
+      </svg>
+    )
+  }
+  if (category === 'Kvittoskrivare' || category === 'Etikettskrivare') {
+    return (
+      <svg viewBox="0 0 140 140" width="140" height="140">
+        <rect x="20" y="34" width="100" height="72" rx="6" fill={g.body} stroke={g.stroke} strokeWidth="1.5" />
+        <rect x="28" y="42" width="84" height="22" rx="3" fill={g.screen} opacity="0.3" />
+        <rect x="28" y="70" width="60" height="10" rx="2" fill={g.screen} />
+        <circle cx="106" cy="80" r="14" fill={g.dark} stroke={g.screen} strokeWidth="1.5" />
+        <circle cx="106" cy="80" r="6" fill={g.screen} opacity="0.8" />
+        <rect x="88" y="96" width="36" height="4" rx="2" fill={g.screen} />
+        <rect x="30" y="96" width="40" height="4" rx="2" fill={g.screen} opacity="0.6" />
+        <rect x="30" y="103" width="30" height="3" rx="1.5" fill={g.stroke} opacity="0.5" />
+      </svg>
+    )
+  }
+  if (category === 'Streckkodsläsare') {
+    return (
+      <svg viewBox="0 0 140 140" width="140" height="140">
+        <rect x="26" y="26" width="40" height="58" rx="5" fill={g.body} stroke={g.stroke} strokeWidth="1.5" />
+        <rect x="31" y="31" width="30" height="22" rx="2" fill={g.screen} opacity="0.3" />
+        <rect x="32" y="57" width="11" height="4" rx="1" fill={g.screen} />
+        <rect x="46" y="57" width="11" height="4" rx="1" fill={g.screen} />
+        <rect x="60" y="72" width="40" height="12" rx="4" fill={g.body} stroke={g.stroke} strokeWidth="1" />
+        <rect x="98" y="70" width="14" height="28" rx="3" fill={g.dark} stroke={g.stroke} strokeWidth="1" />
+        <circle cx="105" cy="98" r="5" fill={g.screen} />
+        <line x1="44" y1="72" x2="70" y2="84" stroke={g.stroke} strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  if (category === 'Kassavåg') {
+    return (
+      <svg viewBox="0 0 140 140" width="140" height="140">
+        <rect x="25" y="24" width="90" height="14" rx="4" fill={g.body} stroke={g.stroke} strokeWidth="1.5" />
+        <rect x="20" y="34" width="100" height="10" rx="3" fill={g.dark} />
+        <rect x="32" y="44" width="8" height="40" rx="2" fill={g.body} stroke={g.stroke} strokeWidth="1" />
+        <rect x="100" y="44" width="8" height="40" rx="2" fill={g.body} stroke={g.stroke} strokeWidth="1" />
+        <rect x="24" y="84" width="92" height="8" rx="3" fill={g.body} stroke={g.stroke} strokeWidth="1" />
+        <rect x="62" y="30" width="20" height="4" rx="2" fill={g.screen} />
+        <rect x="54" y="92" width="32" height="12" rx="2" fill={g.dark} />
+        <rect x="60" y="96" width="20" height="4" rx="1" fill={g.screen} />
+        <rect x="112" y="40" width="18" height="42" rx="3" fill={g.screen} />
+        <rect x="115" y="44" width="12" height="30" rx="2" fill={g.dark} />
+      </svg>
+    )
+  }
+  if (category === 'Kassalåda') {
+    return (
+      <svg viewBox="0 0 140 140" width="140" height="140">
+        <rect x="18" y="34" width="104" height="72" rx="8" fill={g.body} stroke={g.stroke} strokeWidth="1.5" />
+        <rect x="18" y="34" width="104" height="14" rx="8" fill={g.dark} />
+        <rect x="24" y="56" width="46" height="10" rx="3" fill={g.screen} />
+        <rect x="74" y="56" width="42" height="10" rx="3" fill={g.screen} opacity="0.6" />
+        <rect x="24" y="72" width="46" height="10" rx="3" fill={g.screen} />
+        <rect x="74" y="72" width="42" height="10" rx="3" fill={g.screen} opacity="0.6" />
+        <rect x="24" y="88" width="46" height="10" rx="3" fill={g.screen} />
+        <rect x="74" y="88" width="42" height="10" rx="3" fill={g.screen} opacity="0.6" />
+        <circle cx="66" cy="42" r="3.5" fill={g.screen} />
+      </svg>
+    )
+  }
+  if (category === 'Förbrukning') {
+    return (
+      <svg viewBox="0 0 140 140" width="140" height="140">
+        <circle cx="52" cy="66" r="38" fill={g.body} stroke={g.stroke} strokeWidth="1.5" />
+        <circle cx="52" cy="66" r="26" fill={g.dark} />
+        <circle cx="52" cy="66" r="10" fill={g.screen} opacity="0.8" />
+        <rect x="96" y="34" width="18" height="64" rx="9" fill={g.screen} />
+        <rect x="100" y="26" width="10" height="80" rx="5" fill={g.dark} />
+        <rect x="103" y="18" width="4" height="96" rx="2" fill={g.screen} opacity="0.6" />
       </svg>
     )
   }
@@ -70,10 +136,25 @@ function SpecRow({ label, value }) {
   )
 }
 
-function DeviceCard({ device, onZoom, onInfo }) {
+function DeviceCard({ device, index, brand, onZoom, onInfo }) {
   const [imgFailed, setImgFailed] = useState(false)
+  const meta = brands[brand]
+
+  const specMeta = [
+    { key: 'screen', label: 'Skärm', icon: '🖥️', value: device.specs.screen },
+    { key: 'printer', label: 'Skrivare', icon: '🖨️', value: device.specs.printer },
+    { key: 'card', label: 'Kort / NFC', icon: '💳', value: device.specs.card },
+    { key: 'network', label: 'Nätverk', icon: '📶', value: device.specs.network }
+  ].filter(s => s.value && s.value !== '-')
+
+  const infoTag = device.purspot
+    ? { emoji: brands.purspot.infoEmoji, title: 'Innehåller info från Purspot' }
+    : device.flo
+      ? { emoji: brands.flo.infoEmoji, title: 'Innehåller pris och info från shop.flopay.se' }
+      : null
+
   return (
-    <div className="device-card">
+    <div className="device-card" style={{ '--delay': `${index * 70}ms` }}>
       <div
         className="card-icon-wrap"
         onClick={() => onZoom(device)}
@@ -90,66 +171,143 @@ function DeviceCard({ device, onZoom, onInfo }) {
             onError={() => setImgFailed(true)}
           />
         ) : (
-          <DeviceIcon category={device.category} />
+          <DeviceIcon category={device.category} palette={meta.iconColors} />
         )}
         {device.imageUrl && !imgFailed && <span className="zoom-hint">🔍 Förstora</span>}
       </div>
       <div className="card-body">
-        <div className="card-category-badge">{device.category}</div>
+        <div className="card-topline">
+          <span className="card-category-badge">{device.category}</span>
+          {infoTag && <span className="card-has-info" title={infoTag.title}>{infoTag.emoji}</span>}
+        </div>
         <h3 className="card-model">{device.model}</h3>
         <p className="card-formfactor">{device.formFactor}</p>
-        <ul className="card-specs">
-          <li><span className="spec-label">Skärm</span><span className="spec-value">{device.specs.screen}</span></li>
-          <li><span className="spec-label">Skrivare</span><span className="spec-value">{device.specs.printer}</span></li>
-          <li><span className="spec-label">Kort / NFC</span><span className="spec-value">{device.specs.card}</span></li>
-          <li><span className="spec-label">Nätverk</span><span className="spec-value">{device.specs.network}</span></li>
-        </ul>
+        {device.price && (
+          <div className="card-price-row">
+            {device.listPrice && <span className="card-list-price">{device.listPrice}</span>}
+            <span className="card-price">{device.price}</span>
+          </div>
+        )}
+        {specMeta.length > 0 && (
+          <ul className="card-specs">
+            {specMeta.map(s => (
+              <li key={s.key}>
+                <span className="spec-label"><span className="spec-icon">{s.icon}</span>{s.label}</span>
+                <span className="spec-value">{s.value}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         <button className="card-link" onClick={() => onInfo(device)}>
-          Mer information
+          Mer information <span className="card-link-arrow">→</span>
         </button>
       </div>
     </div>
   )
 }
 
-function HardwareTab({ filter, setFilter, onZoom, onInfo }) {
-  const filtered = filter === 'Alla'
-    ? devices
-    : devices.filter(d => d.category === filter)
+function HardwareTab({ brand, filter, setFilter, onZoom, onInfo }) {
+  const [query, setQuery] = useState('')
+  const meta = brands[brand]
+  const cats = brand === 'flo' ? floCategories : categories
+  const devs = brand === 'flo' ? floDevices : devices
+
+  const counts = {}
+  devs.forEach(d => {
+    counts[d.category] = (counts[d.category] || 0) + 1
+  })
+  counts['Alla'] = devs.length
+
+  const filtered = devs.filter(d => filter === 'Alla' || d.category === filter).filter(d => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    const hay = `${d.model} ${d.category} ${d.formFactor} ${d.price || ''} ${d.sku || ''} ${d.specs.screen} ${d.specs.printer} ${d.specs.card} ${d.specs.network}`.toLowerCase()
+    return hay.includes(q)
+  })
 
   return (
     <section>
-      <h1 className="section-title">Hårdvarukatalog</h1>
-      <p className="section-sub">Alla enheter och tillbehör från Purspot.</p>
+      <div className="hero">
+        <div className="hero-glow" aria-hidden="true" />
+        <div className="hero-inner">
+          <div className="hero-badge">{meta.badge}</div>
+          <h1 className="hero-title">{meta.titleStart} <span className="gradient-text">{meta.titleAccent}</span> {meta.titleEnd}</h1>
+          <p className="hero-sub">{meta.sub}</p>
+          <div className="hero-search">
+            <span className="hero-search-icon">🔍</span>
+            <input
+              type="text"
+              className="hero-search-input"
+              placeholder={meta.searchPlaceholder}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+            {query && (
+              <button className="hero-search-clear" onClick={() => setQuery('')} aria-label="Rensa sökning">✕</button>
+            )}
+          </div>
+          <div className="hero-stats">
+            <div className="hero-stat"><strong>{devs.length}</strong><span>produkter</span></div>
+            <div className="hero-stat"><strong>{cats.length - 1}</strong><span>kategorier</span></div>
+            <div className="hero-stat"><strong>SEK</strong><span>{meta.statsLabel}</span></div>
+          </div>
+        </div>
+        <div className="hero-chips" aria-hidden="true">
+          {meta.chips.map((c, i) => (
+            <div className="hero-chip" key={c.label} style={{ '--i': i }}>
+              <span className="hero-chip-icon">{c.icon}</span>
+              {c.label}
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="filter-bar">
-        {categories.map(c => (
+        {cats.map(c => (
           <button
             key={c}
             className={`filter-btn ${filter === c ? 'active' : ''}`}
             onClick={() => setFilter(c)}
           >
             {c}
+            <span className="filter-count">{counts[c] ?? 0}</span>
           </button>
         ))}
       </div>
 
+      <h2 className="list-title">
+        {filter === 'Alla' ? 'Alla produkter' : filter}
+        {query && <span className="list-title-query"> · matchar "{query}"</span>}
+      </h2>
+
       {filtered.length === 0 ? (
         <div className="empty-state">
-          <p>Inga enheter i denna kategori ännu.</p>
+          <div className="empty-emoji">🔍</div>
+          <p>Inga enheter matchar din sökning.</p>
+          <button className="empty-reset" onClick={() => { setQuery(''); setFilter('Alla') }}>Visa alla produkter</button>
         </div>
       ) : (
-        <div className="device-grid">
-          {filtered.map(d => (
-            <DeviceCard key={d.id} device={d} onZoom={onZoom} onInfo={onInfo} />
+        <div className="device-grid" key={filter + query}>
+          {filtered.map((d, i) => (
+            <DeviceCard key={d.id} device={d} index={i} brand={brand} onZoom={onZoom} onInfo={onInfo} />
           ))}
         </div>
       )}
+
+      <div className="cta-band">
+        <div>
+          <h3>{meta.cta.heading}</h3>
+          <p>{meta.cta.text}</p>
+        </div>
+        <a className="btn-primary" href={meta.cta.url} target="_blank" rel="noopener noreferrer">
+          {meta.cta.label}
+        </a>
+      </div>
     </section>
   )
 }
 
-function InfoModal({ device, onClose }) {
+function InfoModal({ device, brand, onClose }) {
   useEffect(() => {
     if (!device) return
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -162,6 +320,10 @@ function InfoModal({ device, onClose }) {
   }, [device, onClose])
 
   if (!device) return null
+
+  const meta = brands[brand]
+  const infoField = device.purspot || device.flo
+  const isFlo = brand === 'flo'
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -177,13 +339,24 @@ function InfoModal({ device, onClose }) {
           <h2 className="modal-title">{device.model}</h2>
           <p className="modal-formfactor">{device.formFactor}</p>
 
-          {device.purspot && (
+          {device.price && (
+            <div className="modal-price-row">
+              {device.listPrice && <span className="modal-list-price">{device.listPrice}</span>}
+              <span className="modal-price">{device.price}</span>
+            </div>
+          )}
+          {device.sku && device.sku !== 'Inte tillgänglig' && (
+            <div className="modal-sku">Artikelnr: {device.sku}</div>
+          )}
+          {isFlo && device.price && <div className="modal-price-note">Alla priser exkl. moms.</div>}
+
+          {infoField && (
             <div className="modal-purspot">
-              <div className="modal-label">💚 Purspot</div>
-              <p>{device.purspot}</p>
+              <div className="modal-label">{meta.infoEmoji} {meta.infoLabel}</div>
+              <p>{infoField}</p>
               {device.sourceUrl && (
                 <a className="modal-link" href={device.sourceUrl} target="_blank" rel="noopener noreferrer">
-                  Mer info på Purspot.com ↗
+                  {meta.infoLink}
                 </a>
               )}
             </div>
@@ -191,6 +364,10 @@ function InfoModal({ device, onClose }) {
 
           {device.extra && (
             <div className="modal-note"><strong>Kort om enheten:</strong> {device.extra}</div>
+          )}
+
+          {device.desc && (
+            <div className="modal-note"><strong>Beskrivning:</strong> {device.desc}</div>
           )}
 
           <div className="modal-specs">
@@ -316,9 +493,10 @@ function SoftposTab() {
   )
 }
 
-function BackofficeTab() {
+function BackofficeTab({ brand }) {
+  const meta = brands[brand]
   const mockArticles = [
-    { name: 'SUNMI V2s skärmfilm', category: 'Tillbehör', price: '149', moms: '25' },
+    { name: brand === 'flo' ? 'Kvittorull 80mm (multipack)' : 'SUNMI V2s skärmfilm', category: brand === 'flo' ? 'Förbrukning' : 'Tillbehör', price: brand === 'flo' ? '599' : '149', moms: '25' },
     { name: 'Kvittorull 58mm (10-pack)', category: 'Förbrukning', price: '89', moms: '25' },
     { name: 'Kvittorull 80mm (10-pack)', category: 'Förbrukning', price: '99', moms: '25' }
   ]
@@ -326,7 +504,7 @@ function BackofficeTab() {
   return (
     <section>
       <div className="bo-header">
-        <h1>Purspot Backoffice</h1>
+        <h1>{meta.label} Backoffice</h1>
         <p className="bo-sub">Artikel & Sortimenthantering</p>
         <div className="bo-badge">Kommer i nästa steg</div>
       </div>
@@ -372,39 +550,77 @@ function BackofficeTab() {
 }
 
 export default function App() {
+  const [brand, setBrand] = useState('purspot')
   const [tab, setTab] = useState('hardware')
   const [filter, setFilter] = useState('Alla')
   const [zoomDevice, setZoomDevice] = useState(null)
   const [infoDevice, setInfoDevice] = useState(null)
 
+  const meta = brands[brand]
+
+  const switchBrand = (next) => {
+    if (next === brand) return
+    setBrand(next)
+    setFilter('Alla')
+    setZoomDevice(null)
+    setInfoDevice(null)
+    if (next === 'flo' && tab === 'softpos') setTab('hardware')
+  }
+
   return (
-    <div className="app">
+    <div className={`app theme-${brand}`}>
+      <div className="aurora" aria-hidden="true">
+        <div className="aurora-blob aurora-blob-1" />
+        <div className="aurora-blob aurora-blob-2" />
+        <div className="aurora-blob aurora-blob-3" />
+      </div>
+
       <nav className="topnav">
-        <div className="nav-left">
-          <span className="brand-mark">P</span>
-          <span className="brand-text">Purspot Lathund</span>
+        <div className="nav-main">
+          <div className="nav-left">
+            <span className="brand-mark">{meta.mark}</span>
+            <span className="brand-text">{meta.brandText}</span>
+          </div>
+          <div className="nav-tabs">
+            {[
+              { id: 'hardware', icon: '📱', label: 'Hårdvara' },
+              ...(brand === 'purspot' ? [{ id: 'softpos', icon: '💳', label: 'SoftPOS' }] : []),
+              { id: 'backoffice', icon: '⚙️', label: 'Backoffice' }
+            ].map(t => (
+              <button
+                key={t.id}
+                className={`nav-tab ${tab === t.id ? 'active' : ''}`}
+                onClick={() => setTab(t.id)}
+              >
+                <span className="tab-icon">{t.icon}</span>
+                <span className="tab-label">{t.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="nav-tabs">
-          {[
-            { id: 'hardware', icon: '📱', label: 'Hårdvara' },
-            { id: 'softpos', icon: '💳', label: 'SoftPOS' },
-            { id: 'backoffice', icon: '⚙️', label: 'Backoffice' }
-          ].map(t => (
+        <div className="nav-brandbar">
+          <span className="nav-brandbar-label">Välj system:</span>
+          <div className="brand-switch">
             <button
-              key={t.id}
-              className={`nav-tab ${tab === t.id ? 'active' : ''}`}
-              onClick={() => setTab(t.id)}
+              className={`brand-switch-btn ${brand === 'purspot' ? 'active' : ''}`}
+              onClick={() => switchBrand('purspot')}
             >
-              <span className="tab-icon">{t.icon}</span>
-              <span className="tab-label">{t.label}</span>
+              <span>💚</span> Purspot
             </button>
-          ))}
+            <button
+              className={`brand-switch-btn ${brand === 'flo' ? 'active' : ''}`}
+              onClick={() => switchBrand('flo')}
+            >
+              <span>💜</span> Moreflo · Northmill
+            </button>
+          </div>
         </div>
       </nav>
 
-      <main className="content">
+      <main className="content" key={brand + tab}>
         {tab === 'hardware' && (
           <HardwareTab
+            brand={brand}
             filter={filter}
             setFilter={setFilter}
             onZoom={setZoomDevice}
@@ -412,14 +628,14 @@ export default function App() {
           />
         )}
         {tab === 'softpos' && <SoftposTab />}
-        {tab === 'backoffice' && <BackofficeTab />}
+        {tab === 'backoffice' && <BackofficeTab brand={brand} />}
       </main>
 
       <footer className="footer">
-        Purspot AB · Internt · Alla enheter är Android-baserade · {new Date().getFullYear()}
+        {meta.footer} · {new Date().getFullYear()}
       </footer>
 
-      <InfoModal device={infoDevice} onClose={() => setInfoDevice(null)} />
+      <InfoModal device={infoDevice} brand={brand} onClose={() => setInfoDevice(null)} />
       <ImageLightbox device={zoomDevice} onClose={() => setZoomDevice(null)} />
     </div>
   )
