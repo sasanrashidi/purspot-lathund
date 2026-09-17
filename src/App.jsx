@@ -1,5 +1,30 @@
 import React, { useState, useEffect } from 'react'
 import { categories, devices, floCategories, floDevices, brands, softposSteps, softposFeatures } from './data'
+import PackageBuilder from './packageBuilder/PackageBuilder'
+
+// =============================================================
+// Tillstånds-persistens – sparar enkla värden i localStorage så
+// att val och framsteg överlever siduppdateringar och navigation.
+// =============================================================
+const PERSIST_PREFIX = 'pu_'
+
+function loadPersisted(key, fallback) {
+  try {
+    const raw = window.localStorage.getItem(PERSIST_PREFIX + key)
+    if (raw === null || raw === undefined) return fallback
+    return JSON.parse(raw)
+  } catch {
+    return fallback
+  }
+}
+
+function savePersisted(key, value) {
+  try {
+    window.localStorage.setItem(PERSIST_PREFIX + key, JSON.stringify(value))
+  } catch {
+    // localStorage otillgänglig – ignorera tyst
+  }
+}
 
 function DeviceIcon({ category, palette }) {
   const g = palette || { body: '#2a5142', stroke: '#96dac1', screen: '#69cba7', dark: '#1f3c32' }
@@ -207,10 +232,12 @@ function DeviceCard({ device, index, brand, onZoom, onInfo }) {
 }
 
 function HardwareTab({ brand, filter, setFilter, onZoom, onInfo }) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(() => loadPersisted(`hw_query_${brand}`, ''))
   const meta = brands[brand]
   const cats = brand === 'flo' ? floCategories : categories
   const devs = brand === 'flo' ? floDevices : devices
+
+  useEffect(() => savePersisted(`hw_query_${brand}`, query), [brand, query])
 
   const counts = {}
   devs.forEach(d => {
@@ -251,14 +278,6 @@ function HardwareTab({ brand, filter, setFilter, onZoom, onInfo }) {
             <div className="hero-stat"><strong>{cats.length - 1}</strong><span>kategorier</span></div>
             <div className="hero-stat"><strong>SEK</strong><span>{meta.statsLabel}</span></div>
           </div>
-        </div>
-        <div className="hero-chips" aria-hidden="true">
-          {meta.chips.map((c, i) => (
-            <div className="hero-chip" key={c.label} style={{ '--i': i }}>
-              <span className="hero-chip-icon">{c.icon}</span>
-              {c.label}
-            </div>
-          ))}
         </div>
       </div>
 
@@ -550,13 +569,17 @@ function BackofficeTab({ brand }) {
 }
 
 export default function App() {
-  const [brand, setBrand] = useState('purspot')
-  const [tab, setTab] = useState('hardware')
-  const [filter, setFilter] = useState('Alla')
+  const [brand, setBrand] = useState(() => loadPersisted('pu_brand', 'purspot'))
+  const [tab, setTab] = useState(() => loadPersisted('pu_tab', 'hardware'))
+  const [filter, setFilter] = useState(() => loadPersisted('pu_filter', 'Alla'))
   const [zoomDevice, setZoomDevice] = useState(null)
   const [infoDevice, setInfoDevice] = useState(null)
 
   const meta = brands[brand]
+
+  useEffect(() => savePersisted('pu_brand', brand), [brand])
+  useEffect(() => savePersisted('pu_tab', tab), [tab])
+  useEffect(() => savePersisted('pu_filter', filter), [filter])
 
   const switchBrand = (next) => {
     if (next === brand) return
@@ -564,7 +587,7 @@ export default function App() {
     setFilter('Alla')
     setZoomDevice(null)
     setInfoDevice(null)
-    if (next === 'flo' && tab === 'softpos') setTab('hardware')
+    if (next === 'flo' && (tab === 'softpos' || tab === 'paket')) setTab('hardware')
   }
 
   return (
@@ -581,38 +604,38 @@ export default function App() {
             <span className="brand-mark">{meta.mark}</span>
             <span className="brand-text">{meta.brandText}</span>
           </div>
-          <div className="nav-tabs">
-            {[
-              { id: 'hardware', icon: '📱', label: 'Hårdvara' },
-              ...(brand === 'purspot' ? [{ id: 'softpos', icon: '💳', label: 'SoftPOS' }] : []),
-              { id: 'backoffice', icon: '⚙️', label: 'Backoffice' }
-            ].map(t => (
+          <div className="nav-right">
+            <div className="nav-tabs">
+              {[
+                { id: 'hardware', icon: '📱', label: 'Hårdvara' },
+                ...(brand === 'purspot' ? [{ id: 'paket', icon: '🧩', label: 'Paketbyggare' }] : []),
+                ...(brand === 'purspot' ? [{ id: 'softpos', icon: '💳', label: 'SoftPOS' }] : []),
+                { id: 'backoffice', icon: '⚙️', label: 'Backoffice' }
+              ].map(t => (
+                <button
+                  key={t.id}
+                  className={`nav-tab ${tab === t.id ? 'active' : ''}`}
+                  onClick={() => setTab(t.id)}
+                >
+                  <span className="tab-icon">{t.icon}</span>
+                  <span className="tab-label">{t.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="brand-switch" role="group" aria-label="Välj system">
               <button
-                key={t.id}
-                className={`nav-tab ${tab === t.id ? 'active' : ''}`}
-                onClick={() => setTab(t.id)}
+                className={`brand-switch-btn ${brand === 'purspot' ? 'active' : ''}`}
+                onClick={() => switchBrand('purspot')}
               >
-                <span className="tab-icon">{t.icon}</span>
-                <span className="tab-label">{t.label}</span>
+                <span>💚</span> Purspot
               </button>
-            ))}
-          </div>
-        </div>
-        <div className="nav-brandbar">
-          <span className="nav-brandbar-label">Välj system:</span>
-          <div className="brand-switch">
-            <button
-              className={`brand-switch-btn ${brand === 'purspot' ? 'active' : ''}`}
-              onClick={() => switchBrand('purspot')}
-            >
-              <span>💚</span> Purspot
-            </button>
-            <button
-              className={`brand-switch-btn ${brand === 'flo' ? 'active' : ''}`}
-              onClick={() => switchBrand('flo')}
-            >
-              <span>💜</span> Moreflo · Northmill
-            </button>
+              <button
+                className={`brand-switch-btn ${brand === 'flo' ? 'active' : ''}`}
+                onClick={() => switchBrand('flo')}
+              >
+                <span>💜</span> Moreflo/Northmill
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -627,6 +650,7 @@ export default function App() {
             onInfo={setInfoDevice}
           />
         )}
+        {tab === 'paket' && <PackageBuilder />}
         {tab === 'softpos' && <SoftposTab />}
         {tab === 'backoffice' && <BackofficeTab brand={brand} />}
       </main>
