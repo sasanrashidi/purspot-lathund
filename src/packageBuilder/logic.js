@@ -89,12 +89,63 @@ export function getDeviceStatus(rules, deviceId, selectedIds) {
   return { state: 'enabled', reason: null }
 }
 
+// Ersätter/utökar getDeviceStatus: tar även hänsyn till vilken
+// verksamhetstyp som är vald. En enhet som inte finns i
+// verksamhetstypens lista gråmarkeras och blir ej valbar. Krav
+// på tillbehör/terminaler (t.ex. "kräver en huvudkassa") gäller
+// endast om den krävda rollen över huvud taget erbjuds av den
+// valda verksamhetstypen.
+export function getDeviceAvailability(rules, deviceId, businessId, selectedIds) {
+  const biz =
+    businessId && rules.businessTypes && rules.businessTypes[businessId]
+      ? rules.businessTypes[businessId]
+      : null
+  const devices = biz ? biz.devices || [] : []
+  const allowedByBusiness = !devices.length || devices.includes(deviceId)
+  if (!allowedByBusiness) {
+    return { state: 'disabled', reason: 'Ej tillgänglig för vald verksamhetstyp' }
+  }
+
+  const terminal = rules.terminals && rules.terminals[deviceId]
+  if (terminal) {
+    const modes = getAvailableModes(rules, deviceId, selectedIds)
+    const enabled = modes.find((m) => !m.disabled)
+    if (enabled) return { state: 'enabled', reason: null }
+    return { state: 'disabled', reason: 'Inget giltigt driftsätt med nuvarande val' }
+  }
+
+  const acc = rules.accessories && rules.accessories[deviceId]
+  if (acc) {
+    // Verksamhetstyp kan ha "tillbehör alltid valbara" – då finns inga krav
+    if (biz && biz.accessoriesUnconditional) return { state: 'enabled', reason: null }
+    for (const entry of acc.requires || []) {
+      const roleIds = getRoleIds(rules, entry)
+      if (roleIds.length) {
+        const offered = roleIds.some((id) => devices.includes(id))
+        const satisfied = roleIds.some((id) => selectedIds.includes(id))
+        if (offered && !satisfied) {
+          return { state: 'disabled', reason: acc.message }
+        }
+      } else {
+        const offered = devices.includes(entry)
+        const satisfied = selectedIds.includes(entry)
+        if (offered && !satisfied) {
+          return { state: 'disabled', reason: acc.message }
+        }
+      }
+    }
+    return { state: 'enabled', reason: null }
+  }
+
+  return { state: 'enabled', reason: null }
+}
+
 // =============================================================
 // Reconcile – justerar valet så att det alltid är giltigt:
 //  - terminaler med ogiltigt driftsätt återställs till första
 //    giltiga läget, eller tas bort om inget läge är giltigt.
-//  - tillbehör behålls med sitt antal (om de är tillåtna för
-//    aktuell verksamhetstyp).
+//  - övriga enheter (kassa/express/tillbehör) behålls med 'on'.
+//    (Antal ligger i en separat `quantities`-map.)
 // Returnerar nytt val + enheter som togs bort (för avisering).
 // =============================================================
 export function reconcileSelection(rules, selected, businessId) {
@@ -120,15 +171,6 @@ export function reconcileSelection(rules, selected, businessId) {
       const valid = modes.find((m) => !m.disabled)
       if (valid) next[id] = valid.id
       else drops.push(id)
-      continue
-    }
-    const qty = Number(selected[id])
-    if (Number.isFinite(qty) && qty >= 1) {
-      next[id] = qty
-      continue
-    }
-    if (getRoleIds(rules, 'kassa').includes(id)) {
-      next[id] = selected[id]
       continue
     }
     next[id] = 'on'

@@ -50,19 +50,47 @@ export default function PackageBuilder() {
   const rules = resolveRules('purspot')
   const [businessId, setBusinessId] = useState(() => pkgLoad('businessId', firstBusinessId(rules)))
   const [selected, setSelected] = useState(() => pkgLoad('selected', {}))
+  const [quantities, setQuantities] = useState(() => {
+    const saved = pkgLoad('quantities', {})
+    const sel = pkgLoad('selected', {})
+    const migrated = { ...saved }
+    for (const id of Object.keys(sel)) {
+      const v = sel[id]
+      if (typeof v === 'number' && v >= 1 && migrated[id] === undefined) migrated[id] = v
+    }
+    return migrated
+  })
+  const [contracts, setContracts] = useState(() => pkgLoad('contracts', {}))
   const [drops, setDrops] = useState(() => pkgLoad('drops', []))
 
   useEffect(() => pkgSave('businessId', businessId), [businessId])
   useEffect(() => pkgSave('selected', selected), [selected])
+  useEffect(() => pkgSave('quantities', quantities), [quantities])
+  useEffect(() => pkgSave('contracts', contracts), [contracts])
   useEffect(() => pkgSave('drops', drops), [drops])
 
   // =========================================================
   // Reconcile – applicerar en förändring och låter logiken
-  // städa valet (tar bort ogiltiga enheter/driftsätt).
+  // städa valet (tar bort ogiltiga enheter/driftsätt). Antal
+  // och köpform för borttagna enheter rensas i takt med valet.
   // =========================================================
   function applyChange(nextSelected, nextBusinessId) {
     const res = reconcileSelection(rules, nextSelected, nextBusinessId)
     setSelected(res.selection)
+    setQuantities((prev) => {
+      const next = {}
+      for (const id of Object.keys(prev || {})) {
+        if (res.selection[id] !== undefined) next[id] = prev[id]
+      }
+      return next
+    })
+    setContracts((prev) => {
+      const next = {}
+      for (const id of Object.keys(prev || {})) {
+        if (res.selection[id] !== undefined) next[id] = prev[id]
+      }
+      return next
+    })
     if (res.drops && res.drops.length) setDrops(res.drops)
   }
 
@@ -106,12 +134,16 @@ export default function PackageBuilder() {
     applyChange({ ...selected, [deviceId]: mode }, businessId)
   }
 
-  // 2c. Ändra antal för ett tillbehör (qty <= 0 tar bort det).
+  // 2c. Ändra antal för en enhet (qty <= 0 tar bort den).
   function handleQtyChange(deviceId, qty) {
-    const next = { ...selected }
-    if (qty <= 0) delete next[deviceId]
-    else next[deviceId] = qty
-    applyChange(next, businessId)
+    if (qty <= 0) {
+      const next = { ...selected }
+      delete next[deviceId]
+      applyChange(next, businessId)
+      return
+    }
+    setQuantities((prev) => ({ ...prev, [deviceId]: qty }))
+    if (selected[deviceId] === undefined) handleToggleDevice(deviceId)
   }
 
   // 2d. Ta bort en enhet direkt från Paketöversikten.
@@ -121,18 +153,32 @@ export default function PackageBuilder() {
     applyChange(next, businessId)
   }
 
+  // 2e. Välj köpform per enhet: 'buy' (direktköp) eller '48' (48 mån avtal).
+  function handleContractChange(deviceId, contract) {
+    setContracts((prev) => ({ ...prev, [deviceId]: contract }))
+  }
+
   const selectedCount = Object.keys(selected).length
   const orderedIds = sortDevicesByRole(rules, Object.keys(selected))
   const deviceById = {}
   for (const d of deviceCatalog) deviceById[d.id] = d
   const groups = groupSelection(rules, selected).map((g) => ({
     ...g,
-    items: g.items.map((item) => ({
-      ...item,
-      name: (deviceById[item.id] || {}).model || item.id,
-      qty: typeof selected[item.id] === 'number' ? selected[item.id] : 1
-    }))
+    items: g.items.map((item) => {
+      const meta = deviceById[item.id] || {}
+      return {
+        ...item,
+        name: meta.model || item.id,
+        qty: quantities[item.id] || 1,
+        buyPrice: meta.buyPrice || 0,
+        monthly48: meta.monthly48 || 0,
+        contract: contracts[item.id] || (meta.monthly48 ? '48' : 'buy')
+      }
+    })
   }))
+
+  const businessMeta =
+    (rules.businessTypes && rules.businessTypes[businessId]) || {}
 
   return (
     <div className="pkg-container">
@@ -148,9 +194,12 @@ export default function PackageBuilder() {
           businessId={businessId}
           devices={deviceCatalog}
           selected={selected}
+          quantities={quantities}
+          contracts={contracts}
           onToggle={handleToggleDevice}
           onSetMode={handleSetMode}
           onSetQty={handleQtyChange}
+          onSetContract={handleContractChange}
         />
       </main>
 
@@ -160,8 +209,10 @@ export default function PackageBuilder() {
           rules={rules}
           selected={selected}
           drops={drops}
+          businessType={businessMeta}
           onRemove={handleRemove}
           onSetQty={handleQtyChange}
+          onSetContract={handleContractChange}
           onDismissDrops={() => setDrops([])}
           businessId={businessId}
         />

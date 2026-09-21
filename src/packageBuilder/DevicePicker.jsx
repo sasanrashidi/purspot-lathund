@@ -1,12 +1,15 @@
 import React from 'react'
-import { getRoleIds, sortDevicesByRole, getDeviceStatus } from './logic'
+import { getRoleIds, getDeviceAvailability } from './logic'
 import ModePicker from './ModePicker'
 
 // =============================================================
 // Steg 2 – välj enheter.
-// Grupperar de enheter som hör till vald verksamhetstyp och
-// visar dem som klickbara kort. Kortterminaler får dessutom en
-// nedfälld ModePicker när de är valda (välj driftsätt).
+// Grupperar alla enheter som hör till varje roll (huvudkassa,
+// expresskassa, kortterminal, tillbehör). Enheter som inte är
+// tillåtna för vald verksamhetstyp gråmarkeras och går inte att
+// välja. Kortterminaler får dessutom en nedfälld ModePicker när
+// de är valda (välj driftsätt A/B/C). Alla valda enheter visar
+// en antalsväljare (–/+).
 // =============================================================
 const GROUP_TITLES = {
   main: 'Huvudkassor',
@@ -16,8 +19,7 @@ const GROUP_TITLES = {
 }
 const GROUP_ORDER = ['main', 'express', 'terminal', 'accessory']
 
-export default function DevicePicker({ rules, businessId, devices, selected, onToggle, onSetMode, onSetQty }) {
-  const businessDevices = (rules.businessTypes[businessId] || {}).devices || []
+export default function DevicePicker({ rules, businessId, devices, selected, quantities, contracts, onToggle, onSetMode, onSetQty, onSetContract }) {
   const deviceById = {}
   for (const d of devices) deviceById[d.id] = d
   const selectedIds = Object.keys(selected)
@@ -26,7 +28,7 @@ export default function DevicePicker({ rules, businessId, devices, selected, onT
     .map((role) => ({
       role,
       title: GROUP_TITLES[role],
-      ids: getRoleIds(rules, role).filter((id) => businessDevices.includes(id))
+      ids: getRoleIds(rules, role)
     }))
     .filter((g) => g.ids.length)
 
@@ -47,13 +49,12 @@ export default function DevicePicker({ rules, businessId, devices, selected, onT
             {group.ids.map((id) => {
               const meta = deviceById[id] || { id }
               const isTerminal = Boolean(rules.terminals && rules.terminals[id])
-              const isAccessory = Boolean(rules.accessories && rules.accessories[id])
               const isSelected = selected[id] !== undefined
-              const qty = typeof selected[id] === 'number' ? selected[id] : 1
-              const status = isSelected
-                ? { state: 'enabled' }
-                : getDeviceStatus(rules, id, selectedIds)
-              const disabled = status.state === 'disabled'
+              const qty = quantities[id] || 1
+              const availability = getDeviceAvailability(rules, id, businessId, selectedIds)
+              const disabled = availability.state === 'disabled'
+              const contract = contracts[id] || (meta.monthly48 ? '48' : 'buy')
+              const hasMonthly = Boolean(meta.monthly48)
 
               return (
                 <div
@@ -66,7 +67,7 @@ export default function DevicePicker({ rules, businessId, devices, selected, onT
                     onClick={() => { if (!disabled) onToggle(id) }}
                     disabled={disabled}
                     aria-pressed={isSelected}
-                    title={disabled ? status.reason : undefined}
+                    title={disabled ? availability.reason : undefined}
                   >
                     {meta.imageUrl && (
                       <img
@@ -81,7 +82,7 @@ export default function DevicePicker({ rules, businessId, devices, selected, onT
                     <span className="pkg-device-cat">{meta.category || ''}</span>
                   </button>
 
-                  {isSelected && isAccessory && (
+                  {isSelected && !disabled && (
                     <div className="pkg-qty-row" role="group" aria-label={`Antal för ${meta.model || meta.id}`}>
                       <button
                         type="button"
@@ -113,6 +114,41 @@ export default function DevicePicker({ rules, businessId, devices, selected, onT
                       onChange={(mode) => onSetMode(id, mode)}
                     />
                   )}
+
+                  {isSelected && !disabled && (meta.buyPrice || meta.monthly48) && (
+                    <div className="pkg-contract-row" role="group" aria-label={`Köpform för ${meta.model || meta.id}`}>
+                      <button
+                        type="button"
+                        className={`pkg-contract-btn${contract === 'buy' ? ' is-active' : ''}`}
+                        onClick={() => onSetContract(id, 'buy')}
+                        aria-pressed={contract === 'buy'}
+                      >
+                        <span className="pkg-contract-head">
+                          <span className="pkg-contract-check" aria-hidden="true">{contract === 'buy' ? '✓' : ''}</span>
+                          <span className="pkg-contract-label">Direktköp</span>
+                        </span>
+                        {meta.buyPrice ? (
+                          <span className="pkg-contract-price">{meta.buyPrice.toLocaleString('sv-SE')} kr</span>
+                        ) : null}
+                      </button>
+                      {hasMonthly && (
+                        <button
+                          type="button"
+                          className={`pkg-contract-btn${contract === '48' ? ' is-active' : ''}`}
+                          onClick={() => onSetContract(id, '48')}
+                          aria-pressed={contract === '48'}
+                        >
+                          <span className="pkg-contract-head">
+                          <span className="pkg-contract-check" aria-hidden="true">{contract === '48' ? '✓' : ''}</span>
+                          <span className="pkg-contract-label">48 mån</span>
+                        </span>
+                          <span className="pkg-contract-price">
+                            {meta.monthly48 ? `${meta.monthly48.toLocaleString('sv-SE')} kr/mån` : 'Löpande pris'}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -121,7 +157,7 @@ export default function DevicePicker({ rules, businessId, devices, selected, onT
       ))}
 
       <p className="pkg-step-hint">
-        Nedtonade enheter kräver ett tillägg som inte är valt ännu.
+        Gråmarkerade enheter är inte tillgängliga för vald verksamhetstyp eller kräver ett tillägg som inte är valt ännu.
       </p>
     </section>
   )

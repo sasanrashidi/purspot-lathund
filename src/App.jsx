@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { categories, devices, floCategories, floDevices, brands, softposSteps, softposFeatures } from './data'
+import { categories, devices, floCategories, floDevices, brands, softposSteps, softposFeatures, formatSEK } from './data'
 import PackageBuilder from './packageBuilder/PackageBuilder'
 
 // =============================================================
@@ -178,6 +178,8 @@ function DeviceCard({ device, index, brand, onZoom, onInfo }) {
       ? { emoji: brands.flo.infoEmoji, title: 'Innehåller pris och info från shop.flopay.se' }
       : null
 
+  const hasBothPrices = brand === 'purspot' && device.buyPrice && device.monthly48
+
   return (
     <div className="device-card" style={{ '--delay': `${index * 70}ms` }}>
       <div
@@ -207,11 +209,30 @@ function DeviceCard({ device, index, brand, onZoom, onInfo }) {
         </div>
         <h3 className="card-model">{device.model}</h3>
         <p className="card-formfactor">{device.formFactor}</p>
-        {device.price && (
-          <div className="card-price-row">
-            {device.listPrice && <span className="card-list-price">{device.listPrice}</span>}
-            <span className="card-price">{device.price}</span>
-          </div>
+        {brand === 'purspot' && device.buyPrice ? (
+          hasBothPrices ? (
+            <div className="card-price-pair">
+              <div className="card-price-line">
+                <span className="card-price-tag">Direktköp</span>
+                <span className="card-price-main">{formatSEK(device.buyPrice)}</span>
+              </div>
+              <div className="card-price-line">
+                <span className="card-price-tag">48 mån avtal</span>
+                <span className="card-price-main">{device.monthly48.toLocaleString('sv-SE')} kr/mån</span>
+              </div>
+            </div>
+          ) : (
+            <div className="card-price-row">
+              <span className="card-price">{formatSEK(device.buyPrice)}</span>
+            </div>
+          )
+        ) : (
+          device.price && (
+            <div className="card-price-row">
+              {device.listPrice && <span className="card-list-price">{device.listPrice}</span>}
+              <span className="card-price">{device.price}</span>
+            </div>
+          )
         )}
         {specMeta.length > 0 && (
           <ul className="card-specs">
@@ -248,7 +269,7 @@ function HardwareTab({ brand, filter, setFilter, onZoom, onInfo }) {
   const filtered = devs.filter(d => filter === 'Alla' || d.category === filter).filter(d => {
     const q = query.trim().toLowerCase()
     if (!q) return true
-    const hay = `${d.model} ${d.category} ${d.formFactor} ${d.price || ''} ${d.sku || ''} ${d.specs.screen} ${d.specs.printer} ${d.specs.card} ${d.specs.network}`.toLowerCase()
+    const hay = `${d.model} ${d.category} ${d.formFactor} ${d.price || ''} ${d.buyPrice || ''} ${d.monthly48 || ''} ${d.sku || ''} ${d.specs.screen} ${d.specs.printer} ${d.specs.card} ${d.specs.network}`.toLowerCase()
     return hay.includes(q)
   })
 
@@ -358,11 +379,30 @@ function InfoModal({ device, brand, onClose }) {
           <h2 className="modal-title">{device.model}</h2>
           <p className="modal-formfactor">{device.formFactor}</p>
 
-          {device.price && (
-            <div className="modal-price-row">
-              {device.listPrice && <span className="modal-list-price">{device.listPrice}</span>}
-              <span className="modal-price">{device.price}</span>
-            </div>
+          {brand === 'purspot' && device.buyPrice ? (
+            device.monthly48 ? (
+              <div className="modal-price-pair">
+                <div className="modal-price-line">
+                  <span className="modal-price-tag">Direktköp</span>
+                  <span className="modal-price-main">{formatSEK(device.buyPrice)}</span>
+                </div>
+                <div className="modal-price-line">
+                  <span className="modal-price-tag">48 mån avtal</span>
+                  <span className="modal-price-main">{device.monthly48.toLocaleString('sv-SE')} kr/mån</span>
+                </div>
+              </div>
+            ) : (
+              <div className="modal-price-row">
+                <span className="modal-price">{formatSEK(device.buyPrice)}</span>
+              </div>
+            )
+          ) : (
+            device.price && (
+              <div className="modal-price-row">
+                {device.listPrice && <span className="modal-list-price">{device.listPrice}</span>}
+                <span className="modal-price">{device.price}</span>
+              </div>
+            )
           )}
           {device.sku && device.sku !== 'Inte tillgänglig' && (
             <div className="modal-sku">Artikelnr: {device.sku}</div>
@@ -568,18 +608,90 @@ function BackofficeTab({ brand }) {
   )
 }
 
+// =============================================================
+// Välkomstskärm – visas första besöket (innan ett system sparats).
+// Två stora, färgstarka knappar för att välja system.
+// =============================================================
+function SystemPicker({ onPick }) {
+  return (
+    <section className="sys-picker" aria-label="Välj system">
+      <div className="sys-picker-glow" aria-hidden="true" />
+
+      <div className="sys-picker-head">
+        <span className="sys-picker-mark">P</span>
+        <h1 className="sys-picker-title">Välj system</h1>
+        <p className="sys-picker-sub">
+          Vilket kassasystem ska få starta lathunden? Du kan alltid byta
+          längst upp till höger när som helst.
+        </p>
+      </div>
+
+      <div className="sys-picker-options">
+        <button
+          type="button"
+          className="sys-picker-card is-purspot"
+          onClick={() => onPick('purspot')}
+        >
+          <span className="sys-picker-blob" aria-hidden="true" />
+          <span className="sys-picker-card-top">
+            <span className="sys-picker-emoji" aria-hidden="true">💚</span>
+            <span className="sys-picker-name">Purspot</span>
+            <span className="sys-picker-arrow" aria-hidden="true">→</span>
+          </span>
+          <span className="sys-picker-desc">
+            Kassasystem, expresskassor, kortterminaler och tillbehör från
+            Purspot — komplett utbud under ett tak.
+          </span>
+          <span className="sys-picker-badge">Öppna Purspot</span>
+        </button>
+
+        <button
+          type="button"
+          className="sys-picker-card is-flo"
+          onClick={() => onPick('flo')}
+        >
+          <span className="sys-picker-blob" aria-hidden="true" />
+          <span className="sys-picker-card-top">
+            <span className="sys-picker-emoji" aria-hidden="true">💜</span>
+            <span className="sys-picker-name">Moreflo · Northmill</span>
+            <span className="sys-picker-arrow" aria-hidden="true">→</span>
+          </span>
+          <span className="sys-picker-desc">
+            Kassadatorer, kortterminaler, skrivare, vågar och tillbehör från
+            Flo Pay — med pris och artikelnummer.
+          </span>
+          <span className="sys-picker-badge">Öppna Moreflo</span>
+        </button>
+      </div>
+    </section>
+  )
+}
+
 export default function App() {
   const [brand, setBrand] = useState(() => loadPersisted('pu_brand', 'purspot'))
   const [tab, setTab] = useState(() => loadPersisted('pu_tab', 'hardware'))
   const [filter, setFilter] = useState(() => loadPersisted('pu_filter', 'Alla'))
   const [zoomDevice, setZoomDevice] = useState(null)
   const [infoDevice, setInfoDevice] = useState(null)
+  const [showSystemPicker, setShowSystemPicker] = useState(() => {
+    try {
+      return !window.localStorage.getItem('pu_brand')
+    } catch {
+      return true
+    }
+  })
 
   const meta = brands[brand]
 
   useEffect(() => savePersisted('pu_brand', brand), [brand])
   useEffect(() => savePersisted('pu_tab', tab), [tab])
   useEffect(() => savePersisted('pu_filter', filter), [filter])
+
+  const pickSystem = (next) => {
+    setBrand(next)
+    setFilter('Alla')
+    setShowSystemPicker(false)
+  }
 
   const switchBrand = (next) => {
     if (next === brand) return
@@ -588,6 +700,20 @@ export default function App() {
     setZoomDevice(null)
     setInfoDevice(null)
     if (next === 'flo' && (tab === 'softpos' || tab === 'paket')) setTab('hardware')
+  }
+
+  if (showSystemPicker) {
+    return (
+      <div className="app theme-purspot">
+        <div className="aurora" aria-hidden="true">
+          <div className="aurora-blob aurora-blob-1" />
+          <div className="aurora-blob aurora-blob-2" />
+          <div className="aurora-blob aurora-blob-3" />
+        </div>
+        <SystemPicker onPick={pickSystem} />
+        <footer className="footer">Purspot AB · Internt · Alla enheter är Android-baserade</footer>
+      </div>
+    )
   }
 
   return (
@@ -600,10 +726,20 @@ export default function App() {
 
       <nav className="topnav">
         <div className="nav-main">
-          <div className="nav-left">
+          <button
+            type="button"
+            className="nav-left nav-home"
+            onClick={() => {
+              setTab('hardware')
+              setShowSystemPicker(true)
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+            aria-label="Till startsidan (välj plattform)"
+            title="Till startsidan"
+          >
             <span className="brand-mark">{meta.mark}</span>
-            <span className="brand-text">{meta.brandText}</span>
-          </div>
+            <span className="brand-text">LATHUNDEN</span>
+          </button>
           <div className="nav-right">
             <div className="nav-tabs">
               {[

@@ -6,6 +6,39 @@ export const categories = [
   'Tillbehör'
 ]
 
+// =============================================================
+// EXEMPELPRISER – Purspot (SEK exkl. moms).
+// -------------------------------------------------------------
+// Ersätt siffrorna nedan med riktiga priser när de finns på
+// plats. Varje enhet har två alternativ:
+//   buyPrice   – engångspris vid direktköp
+//   monthly48  – månadskostnad vid 48 månaders avtal
+// Enheter som saknas i tabellen visar inte något pris.
+// =============================================================
+export const purspotPricing = {
+  v2s:        { buyPrice: 8900,  monthly48: 249 },
+  'flex3-counter': { buyPrice: 18900, monthly48: 449 },
+  'flex3-floor':   { buyPrice: 21500, monthly48: 499 },
+  t2:         { buyPrice: 12900, monthly48: 329 },
+  t3:         { buyPrice: 15900, monthly48: 399 },
+  t3promax:   { buyPrice: 18500, monthly48: 449 },
+  d3mini:     { buyPrice: 10900, monthly48: 289 },
+  kds:        { buyPrice: 8900,  monthly48: 249 },
+  orb:        { buyPrice: 9900,  monthly48: 269 },
+  cloudprinter: { buyPrice: 4900, monthly48: 129 },
+  kassalada:  { buyPrice: 1900,  monthly48: 49 },
+  kvittorullar: { buyPrice: 799 },
+  rx5000:     { buyPrice: 5900,  monthly48: 169 },
+  dx8000:     { buyPrice: 6500,  monthly48: 189 },
+  a920:       { buyPrice: 5900,  monthly48: 169 }
+}
+
+// Formatera antal till sverige-format, t.ex. 15900 -> "15 900 kr"
+export function formatSEK(n) {
+  if (n === undefined || n === null) return null
+  return n.toLocaleString('sv-SE') + ' kr'
+}
+
 export const devices = [
   {
     id: 'v2s',
@@ -256,7 +289,7 @@ export const devices = [
     sourceUrl: 'https://purspot.com/betallosningar/kortterminal',
     imageUrl: 'https://images.squarespace-cdn.com/content/v1/5ae31811da02bc3b1921974e/1721740837594-HPEIJX774TLQUSMWNV65/POS+PAX+A920-1.png'
   }
-]
+].map((device) => ({ ...device, ...(purspotPricing[device.id] || {}) }))
 
 export const floCategories = [
   'Alla',

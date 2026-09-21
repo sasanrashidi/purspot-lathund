@@ -48,7 +48,7 @@ const RETAIL_DEVICES = [
   // Kortterminaler
   'rx5000', 'dx8000', 'a920',
   // Tillbehör
-  'orb', 'cloudprinter', 'kassalada'
+  'cloudprinter', 'kassalada'
 ]
 
 const GROCERY_DEVICES = [
@@ -61,8 +61,6 @@ const GROCERY_DEVICES = [
 ]
 
 const EVENT_DEVICES = [
-  // Huvudkassor
-  't2', 't3', 't3promax', 'd3mini',
   // Kortterminaler
   'rx5000', 'dx8000', 'a920',
   // Tillbehör
@@ -79,21 +77,25 @@ export const PURSPOT_RULES = {
       label: 'Restaurang',
       icon: '🍽️',
       hint: 'Kassa, köksskärm och expresskassa',
-      devices: RESTAURANT_DEVICES
+      devices: RESTAURANT_DEVICES,
+      // Tillbehör alltid valbara – oavsett om huvudkassa/expresskassa valts
+      accessoriesUnconditional: true
     },
     cafe: {
       id: 'cafe',
       label: 'Café',
       icon: '☕',
       hint: 'Kassa, köksskärm och expresskassa',
-      devices: RESTAURANT_DEVICES
+      devices: RESTAURANT_DEVICES,
+      accessoriesUnconditional: true
     },
     retail: {
       id: 'retail',
       label: 'Butik',
       icon: '👕',
       hint: 'Kassa, terminal och tillbehör',
-      devices: RETAIL_DEVICES
+      devices: RETAIL_DEVICES,
+      accessoriesUnconditional: true
     },
     grocery: {
       id: 'grocery',
