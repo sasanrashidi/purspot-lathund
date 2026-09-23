@@ -1129,6 +1129,10 @@ export const brands = {
     sub: 'Kassasystem, expresskassor, kortterminaler och tillbehör från Purspot — bläddra, förstora bilder och få all information om varje produkt.',
     searchPlaceholder: 'Sök enhet, t.ex. T3, Flex 3, kassalåda…',
     statsLabel: 'support',
+    support: {
+      phone: '010-722 02 90',
+      email: 'Support@purspot.com'
+    },
     infoEmoji: '💚',
     infoLabel: 'Purspot',
     infoLink: 'Mer info på Purspot.com ↗',
@@ -1162,6 +1166,10 @@ export const brands = {
     sub: 'Kassadatorer, kortterminaler, kvittoskrivare, vågar, etikettskrivare och tillbehör från Northmill Flo — med pris, artikelnr och all information för varje produkt.',
     searchPlaceholder: 'Sök enhet, t.ex. PAX A920, TSP143, POS80…',
     statsLabel: 'priser exkl. moms',
+    support: {
+      phone: '08-613 70 20',
+      email: 'support@flopay.se'
+    },
     infoEmoji: '💜',
     infoLabel: 'Flo Pay',
     infoLink: 'Öppna i webshopen ↗',

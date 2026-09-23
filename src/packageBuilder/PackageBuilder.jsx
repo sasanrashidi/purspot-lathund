@@ -61,13 +61,11 @@ export default function PackageBuilder() {
     return migrated
   })
   const [contracts, setContracts] = useState(() => pkgLoad('contracts', {}))
-  const [drops, setDrops] = useState(() => pkgLoad('drops', []))
 
   useEffect(() => pkgSave('businessId', businessId), [businessId])
   useEffect(() => pkgSave('selected', selected), [selected])
   useEffect(() => pkgSave('quantities', quantities), [quantities])
   useEffect(() => pkgSave('contracts', contracts), [contracts])
-  useEffect(() => pkgSave('drops', drops), [drops])
 
   // =========================================================
   // Reconcile – applicerar en förändring och låter logiken
@@ -91,7 +89,6 @@ export default function PackageBuilder() {
       }
       return next
     })
-    if (res.drops && res.drops.length) setDrops(res.drops)
   }
 
   // ---------------------------------------------------------
@@ -206,15 +203,8 @@ export default function PackageBuilder() {
       <aside className="pkg-side">
         <PackageSummary
           groups={groups}
-          rules={rules}
-          selected={selected}
-          drops={drops}
           businessType={businessMeta}
           onRemove={handleRemove}
-          onSetQty={handleQtyChange}
-          onSetContract={handleContractChange}
-          onDismissDrops={() => setDrops([])}
-          businessId={businessId}
         />
       </aside>
     </div>

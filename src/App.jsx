@@ -297,7 +297,11 @@ function HardwareTab({ brand, filter, setFilter, onZoom, onInfo }) {
           <div className="hero-stats">
             <div className="hero-stat"><strong>{devs.length}</strong><span>produkter</span></div>
             <div className="hero-stat"><strong>{cats.length - 1}</strong><span>kategorier</span></div>
-            <div className="hero-stat"><strong>SEK</strong><span>{meta.statsLabel}</span></div>
+            <div className="hero-stat hero-stat-support">
+              <span className="hero-support-label">Support</span>
+              <a className="hero-support-phone" href={`tel:${meta.support.phone.replace(/\s/g, '')}`}>{meta.support.phone}</a>
+              <a className="hero-support-mail" href={`mailto:${meta.support.email}`}>{meta.support.email}</a>
+            </div>
           </div>
         </div>
       </div>
@@ -477,6 +481,34 @@ function ImageLightbox({ device, onClose }) {
   )
 }
 
+function GenericLightbox({ img, onClose }) {
+  useEffect(() => {
+    if (!img) return
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+  }, [img, onClose])
+
+  if (!img) return null
+
+  return (
+    <div className="lightbox-overlay" onClick={onClose}>
+      <button className="lightbox-close" onClick={onClose} aria-label="Stäng">✕</button>
+      <img
+        className="lightbox-img"
+        src={img.src}
+        alt={img.caption}
+        onClick={(e) => e.stopPropagation()}
+      />
+      <div className="lightbox-caption" onClick={(e) => e.stopPropagation()}>{img.caption}</div>
+    </div>
+  )
+}
+
 function PhoneMockup() {
   return (
     <div className="phone-mockup">
@@ -552,58 +584,447 @@ function SoftposTab() {
   )
 }
 
-function BackofficeTab({ brand }) {
+function BoShot({ src, alt, caption, onZoom }) {
+  return (
+    <figure
+      className="bo-shot"
+      role="button"
+      tabIndex="0"
+      aria-label={`Förstora bild: ${caption}`}
+      onClick={() => onZoom({ src, caption })}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onZoom({ src, caption })
+        }
+      }}
+    >
+      <img src={src} alt={alt} loading="lazy" />
+      <span className="bo-zoom-hint">Klicka för att förstora</span>
+      <figcaption>{caption}</figcaption>
+    </figure>
+  )
+}
+
+const boIconInfo = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4M12 8h.01" />
+  </svg>
+)
+
+const boIconWarn = (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <path d="M12 9v4M12 17h.01" />
+  </svg>
+)
+
+const boNav = [
+  { label: 'Start', items: [{ id: 'bo-atkomst', label: 'Åtkomst & Inloggning' }] },
+  {
+    label: 'Försäljning',
+    items: [
+      { id: 'bo-oversikt', label: 'Översikt' },
+      { id: 'bo-rapporter', label: 'Rapporter & Automatisk Bokföring' },
+      { id: 'bo-auto-bokforing', label: 'Automatisk bokföring & e-post', sub: true }
+    ]
+  },
+  {
+    label: 'Transaktioner',
+    items: [
+      { id: 'bo-transaktioner', label: 'Transaktioner' },
+      { id: 'bo-kvitton', label: 'Kvitton', sub: true },
+      { id: 'bo-ordrar', label: 'Ordrar', sub: true },
+      { id: 'bo-presentkort', label: 'Presentkort', sub: true }
+    ]
+  }
+]
+
+const BO_TARGETS = [
+  'bo-atkomst', 'bo-oversikt', 'bo-rapporter', 'bo-auto-bokforing',
+  'bo-transaktioner', 'bo-kvitton', 'bo-ordrar', 'bo-presentkort'
+]
+
+const boMetrics = [
+  { n: 'Total Försäljning', d: 'Summan av all försäljning' },
+  { n: 'Antal ordrar', d: 'Antal genomförda ordrar' },
+  { n: 'Antal Produkter', d: 'Antal sålda produkter' },
+  { n: 'Snitt Försäljning per order', d: 'Genomsnittlig ordervärde' },
+  { n: 'Snitt antal produkter per order', d: 'Produkter per order i snitt' },
+  { n: 'Återbetalningar', d: 'Antal utförda återbetalningar' },
+  { n: 'Totalt givna rabatter', d: 'Summan av alla rabatter' }
+]
+
+const boReports = [
+  { tag: 'Dag', n: 'X-Rapport', d: 'Total försäljning sedan start.' },
+  { tag: 'Dag', n: 'Z-Rapport', d: 'Sammanställd dagsrapport för alla enheter. Syns dagen efter, eftersom dagsavslut sker automatiskt.' },
+  { tag: 'Dag', n: 'Z-Dagsrapport', d: 'Dagsrapport uppdelad per individuell enhet (t.ex. huvudkassa, expresskassa).' },
+  { n: 'Periodrapporter', d: 'Försäljning samlad för en vald tidsperiod.' },
+  { n: 'Artikelrapport', d: 'Försäljning uppdelad per artikel.' },
+  { n: 'Tidrapport Personal', d: 'Arbetstider och närvaro för personalen.' },
+  { n: 'Timförsäljningsrapport', d: 'Försäljning uppdelad per timme.' },
+  { n: 'Kassörapport', d: 'Underlag för kassaräkning och avstämning.' },
+  { n: 'Journaler', d: 'Händelser och loggar från kassan.' },
+  { n: 'Presentkortsrapport', d: 'Översikt över utfärdade och inlösta presentkort.' }
+]
+
+function BackofficeTab({ brand, onZoom }) {
   const meta = brands[brand]
-  const mockArticles = [
-    { name: brand === 'flo' ? 'Kvittorull 80mm (multipack)' : 'SUNMI V2s skärmfilm', category: brand === 'flo' ? 'Förbrukning' : 'Tillbehör', price: brand === 'flo' ? '599' : '149', moms: '25' },
-    { name: 'Kvittorull 58mm (10-pack)', category: 'Förbrukning', price: '89', moms: '25' },
-    { name: 'Kvittorull 80mm (10-pack)', category: 'Förbrukning', price: '99', moms: '25' }
-  ]
+  const [activeId, setActiveId] = useState('bo-atkomst')
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    const els = BO_TARGETS.map(id => document.getElementById(id)).filter(Boolean)
+    if (els.length === 0) return
+    let ticking = false
+    let disposed = false
+    const update = () => {
+      ticking = false
+      const offset = 130
+      let current = els[0]
+      for (let i = 0; i < els.length; i++) {
+        if (els[i].getBoundingClientRect().top - offset <= 0) current = els[i]
+      }
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 4) {
+        current = els[els.length - 1]
+      }
+      if (!disposed) setActiveId(current.id)
+    }
+    const onScroll = () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(update) }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    update()
+    return () => {
+      disposed = true
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [])
+
+  const copyUrl = async () => {
+    const url = 'https://bo.purspot.com/login'
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      window.prompt('Kopiera länken:', url)
+    }
+  }
 
   return (
     <section>
       <div className="bo-header">
         <h1>{meta.label} Backoffice</h1>
-        <p className="bo-sub">Artikel & Sortimenthantering</p>
-        <div className="bo-badge">Kommer i nästa steg</div>
+        <p className="bo-sub">Instruktionshandbok – åtkomst, översikt, rapporter och transaktioner</p>
+        <div className="bo-badge">Guide</div>
       </div>
 
-      <div className="bo-toolbar">
-        <input type="text" placeholder="Sök artikel..." className="bo-search" disabled />
-        <button className="btn-primary" disabled>+ Lägg till artikel</button>
-      </div>
+      <div className="bo-guide">
+        <aside className="bo-toc" aria-label="Snabbnavigering">
+          {boNav.map(g => (
+            <div key={g.label}>
+              <p className="bo-toc-label">{g.label}</p>
+              {g.items.map(it => (
+                <a
+                  key={it.id}
+                  href={'#' + it.id}
+                  className={`bo-toc-link${it.sub ? ' bo-toc-sub' : ''}${activeId === it.id ? ' active' : ''}`}
+                >
+                  {it.label}
+                </a>
+              ))}
+            </div>
+          ))}
+          <p className="bo-toc-foot">4 sektioner · 6 skärmbilder</p>
+        </aside>
 
-      <div className="bo-table-wrap">
-        <table className="bo-table">
-          <thead>
-            <tr>
-              <th>Artikelnamn</th>
-              <th>Kategori</th>
-              <th>Pris inkl. moms</th>
-              <th>Moms %</th>
-              <th>Åtgärd</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockArticles.map((a, i) => (
-              <tr key={i}>
-                <td className="bo-cell-name">{a.name}</td>
-                <td>{a.category}</td>
-                <td>{a.price} kr</td>
-                <td>{a.moms}%</td>
-                <td className="bo-cell-actions">
-                  <button className="btn-ghost" disabled>Redigera</button>
-                  <button className="btn-ghost btn-danger" disabled>Ta bort</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <div className="bo-body">
 
-      <p className="bo-note">
-        Funktionalitet för artikelhantering implementeras i nästa steg.
-      </p>
+          {/* ---------- 1. Åtkomst & Inloggning ---------- */}
+          <div className="bo-sec-head" id="bo-atkomst">
+            <span className="bo-sec-num">1</span>
+            <h2>Åtkomst &amp; Inloggning</h2>
+          </div>
+          <section className="bo-card">
+            <p className="bo-lead">Backoffice är helt webbaserat – det finns inget att installera. Du loggar bara in i en webbläsare och har full översikt över försäljning, rapporter och transaktioner.</p>
+
+            <ul className="bo-list">
+              <li><strong>Fungerar på alla våra enheter:</strong> huvudkassa, expresskassa och minikassa.</li>
+              <li><strong>Fungerar på externa enheter:</strong> dator, mobil och surfplatta – med webbläsare och uppkoppling.</li>
+              <li><strong>Vid köp av hårdvara</strong> får du ett välkomstbrev som innehåller alla inloggningsuppgifter.</li>
+            </ul>
+
+            <h4>Så loggar du in</h4>
+            <ol className="bo-steps">
+              <li>Gå till adressen nedan i valfri webbläsare.</li>
+              <li>Använd inloggningsuppgifterna från välkomstbrevet.</li>
+              <li>Du hamnar på välkomstsidan <strong>"Hem"</strong> – härifrån navigerar du mellan flikarna i Backoffice.</li>
+            </ol>
+
+            <div className="bo-url">
+              <code>https://bo.purspot.com/login</code>
+              <button type="button" onClick={copyUrl}>{copied ? 'Kopierat!' : 'Kopiera'}</button>
+            </div>
+
+            <div className="bo-note-box info">
+              {boIconInfo}
+              <p>Spara gärna länken som bokmärke i webbläsaren så har du alltid snabb åtkomst till Backoffice.</p>
+            </div>
+
+            <BoShot
+              src="/images/backoffice/01-atkomst-inloggning.png"
+              alt="Backoffice – välkomstsidan (Hem) efter inloggning"
+              caption={`Välkomstsidan "Hem" som du ser efter inloggning.`}
+              onZoom={onZoom}
+            />
+          </section>
+
+          {/* ---------- 2. Översikt ---------- */}
+          <div className="bo-sec-head" id="bo-oversikt">
+            <span className="bo-sec-num">2</span>
+            <h2>Översikt</h2>
+          </div>
+          <section className="bo-card">
+            <p className="bo-lead">Fliken <strong>"Översikt"</strong> ger en visuell och statistisk överblick över försäljningen. Här ser du hur det går – i realtid och utan att behöva gå in i de tyngre rapporterna.</p>
+
+            <h3 className="bo-first">Mätpunkter</h3>
+            <p className="bo-muted">Nyckeltalen visar försäljningen i den period du har valt:</p>
+            <div className="bo-metrics">
+              {boMetrics.map(m => (
+                <div className="bo-metric" key={m.n}>
+                  <strong>{m.n}</strong>
+                  <span>{m.d}</span>
+                </div>
+              ))}
+            </div>
+
+            <h3>Grafer och topplistor</h3>
+            <ul className="bo-list">
+              <li><strong>Total försäljning per timme</strong> – se när försäljningen toppar under dagen.</li>
+              <li><strong>Timförsäljning per säljställe/kassa</strong> – jämför prestanda mellan enheterna.</li>
+              <li><strong>Toppförsäljning per produkt/huvudgrupp</strong> – vad som säljer bäst.</li>
+              <li><strong>Top Försäljare</strong> – ranking av personalens försäljning.</li>
+            </ul>
+
+            <BoShot
+              src="/images/backoffice/02-oversikt.png"
+              alt="Backoffice – fliken Översikt med nyckeltal, grafer och topplistor"
+              caption="Översikten med nyckeltal, grafer och topplistor."
+              onZoom={onZoom}
+            />
+          </section>
+
+          {/* ---------- 3. Rapporter & Automatisk Bokföring ---------- */}
+          <div className="bo-sec-head" id="bo-rapporter">
+            <span className="bo-sec-num">3</span>
+            <h2>Rapporter &amp; Automatisk Bokföring</h2>
+          </div>
+          <section className="bo-card">
+            <p className="bo-lead">Under fliken <strong>"Rapporter"</strong> hittar du alla rapporter som behövs för daglig administration, bokföring och uppföljning.</p>
+
+            <h3 className="bo-first">Rapporttyper</h3>
+            <div className="bo-report-grid">
+              {boReports.map(r => (
+                <div className="bo-report" key={r.n}>
+                  <b>{r.tag && <span className="bo-tag">{r.tag}</span>}{r.n}</b>
+                  <span>{r.d}</span>
+                </div>
+              ))}
+            </div>
+
+            <h3>Filtrering på enheter</h3>
+            <p>Du kan filtrera på specifika kassaregister/terminaler för att se enhetsspecifika rapporter – till exempel endast huvudkassan, eller alla tre enheter samtidigt.</p>
+            <div className="bo-pills">
+              <span className="bo-pill">Huvudkassa</span>
+              <span className="bo-pill">Expresskassa</span>
+              <span className="bo-pill">Minikassa</span>
+              <span className="bo-pill">Alla enheter</span>
+            </div>
+
+            <h3 id="bo-auto-bokforing">Automatisk bokföring &amp; e-post</h3>
+            <p>Inställningarna hittar du under <strong>Inställningar &rarr; Rapporter</strong>.</p>
+            <ul className="bo-list">
+              <li><strong>Dagsavslut sker automatiskt</strong> på den tid du väljer. Rapporten skickas både via e-post och sparas i Backoffice.</li>
+              <li><strong>Månadsrapporter</strong> skickas automatiskt den 1:a varje månad kl. 05:00.</li>
+            </ul>
+
+            <h4>Inställningsflikar</h4>
+            <div className="bo-tabs">
+              <span className="bo-tab on">Z-Dagsrapport</span>
+              <span className="bo-tab">Automatisk Z-Rapport</span>
+              <span className="bo-tab">Månadsrapport</span>
+              <span className="bo-tab">Presentkortsrapport</span>
+            </div>
+
+            <h4>Standardinställningar</h4>
+            <ol className="bo-steps">
+              <li>Fyll i din <strong>e-postadress</strong>.</li>
+              <li>Bocka i <strong>"Skicka Dagsrapport som PDF"</strong>.</li>
+              <li>Bocka i <strong>"Skicka SIE"</strong>.</li>
+            </ol>
+
+            <h3>Manuella åtgärder i rapporter</h3>
+            <p>Markera en rapport i listan och välj vilken åtgärd du behöver:</p>
+            <div className="bo-actions">
+              <span className="bo-action primary">Exportera till Fortnox</span>
+              <span className="bo-action">Ladda ner SIE</span>
+              <span className="bo-action">Ladda ner PDF</span>
+              <span className="bo-action">E-posta PDF</span>
+            </div>
+
+            <div className="bo-note-box info">
+              {boIconInfo}
+              <p><strong>E-posta PDF</strong> är praktiskt när du eller kunden behöver en kopia direkt i inkorgen.</p>
+            </div>
+
+            <BoShot
+              src="/images/backoffice/03-rapporter.png"
+              alt="Backoffice – rapportöversikt med alla rapporttyper och filter"
+              caption="Rapportöversikten med alla rapporttyper och filter."
+              onZoom={onZoom}
+            />
+          </section>
+
+          {/* ---------- 4. Transaktioner ---------- */}
+          <div className="bo-sec-head" id="bo-transaktioner">
+            <span className="bo-sec-num">4</span>
+            <h2>Transaktioner</h2>
+          </div>
+          <section className="bo-card">
+            <p className="bo-lead" style={{ margin: 0 }}>Fliken <strong>"Transaktioner"</strong> samlar kvitton, ordrar och presentkort på ett ställe. Nedan går vi igenom de tre underflikarna.</p>
+          </section>
+
+          <section className="bo-card" id="bo-kvitton">
+            <h3 className="bo-first">Kvitton</h3>
+            <ol className="bo-steps">
+              <li>Sök på <strong>"Från"-</strong> och <strong>"Till"-datum</strong>.</li>
+              <li>Klicka på <strong>Uppdatera</strong> för att visa listan.</li>
+              <li>Listan visar <strong>kvittonummer, ordernr, datum och belopp</strong>.</li>
+              <li>Klicka på ett kvitto för att se detaljer – därifrån kan du <strong>Exportera till Fortnox, Ladda ner SIE, Ladda ner PDF eller E-posta PDF</strong>.</li>
+            </ol>
+
+            <div className="bo-note-box info">
+              {boIconInfo}
+              <p><strong>E-posta PDF</strong> är perfekt om kunden behöver en kopia via e-post – kvittot skickas direkt till angiven adress.</p>
+            </div>
+
+            <BoShot
+              src="/images/backoffice/04-kvitton.png"
+              alt="Backoffice – Transaktioner, fliken Kvitton"
+              caption="Transaktioner – Kvitton: sök på datum och öppna ett kvitto för detaljer."
+              onZoom={onZoom}
+            />
+          </section>
+
+          <section className="bo-card" id="bo-ordrar">
+            <h3 className="bo-first">Ordrar</h3>
+            <p>Filtrera listan med hjälp av filtren:</p>
+
+            <div className="bo-filter-row"><b>Datum</b> – välj Från- och Till-datum.</div>
+
+            <div className="bo-filter-row">
+              <b>Platser</b>
+              <div className="bo-pills">
+                <span className="bo-pill">Huvudkassa</span>
+                <span className="bo-pill">Expresskassa</span>
+              </div>
+            </div>
+
+            <div className="bo-filter-row">
+              <b>Ursprung</b>
+              <div className="bo-pills">
+                <span className="bo-pill">Foodora</span>
+                <span className="bo-pill">Uber</span>
+                <span className="bo-pill">Wolt</span>
+                <span className="bo-pill">POS</span>
+              </div>
+            </div>
+
+            <div className="bo-filter-row">
+              <b>Status</b>
+              <div className="bo-pills">
+                <span className="bo-pill">Avbruten</span>
+                <span className="bo-pill">Godkänd</span>
+                <span className="bo-pill">Skapad</span>
+              </div>
+            </div>
+
+            <div className="bo-note-box warn">
+              {boIconWarn}
+              <p><strong>Viktigt:</strong> under enskilda ordrar går det <strong>inte</strong> att skicka eller exportera via Fortnox, PDF eller SIE. Använd fliken <strong>Kvitton</strong> när du behöver den typen av export.</p>
+            </div>
+
+            <BoShot
+              src="/images/backoffice/05-ordrar.png"
+              alt="Backoffice – Transaktioner, fliken Ordrar"
+              caption="Transaktioner – Ordrar: filtrera på datum, plats, ursprung och status."
+              onZoom={onZoom}
+            />
+          </section>
+
+          <section className="bo-card" id="bo-presentkort">
+            <h3 className="bo-first">Presentkort</h3>
+            <p className="bo-muted">Överst visas en sammanfattning av presentkorten:</p>
+
+            <div className="bo-stats">
+              <div className="bo-stat"><strong>–</strong><span>Utestående Saldo</span></div>
+              <div className="bo-stat"><strong>–</strong><span>Aktiva Kort</span></div>
+              <div className="bo-stat"><strong>–</strong><span>Totalt Utfärdat</span></div>
+              <div className="bo-stat"><strong>–</strong><span>Totalt Inlöst</span></div>
+            </div>
+
+            <p>Tabellen visar följande kolumner:</p>
+            <div className="bo-table-card">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Presentkorts-kod</th>
+                    <th>Ursprungligt Belopp</th>
+                    <th>Återstående Saldo</th>
+                    <th>Status</th>
+                    <th>Utfärdat Datum</th>
+                    <th>Utgångsdatum</th>
+                    <th>Användningshistorik</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>PC-1042</td>
+                    <td>500,00 kr</td>
+                    <td>350,00 kr</td>
+                    <td><span className="bo-status on">Aktiv</span></td>
+                    <td>2026-08-12</td>
+                    <td>2027-08-12</td>
+                    <td>1 inlösen – 150,00 kr</td>
+                  </tr>
+                  <tr>
+                    <td>PC-0987</td>
+                    <td>250,00 kr</td>
+                    <td>0,00 kr</td>
+                    <td><span className="bo-status off">Inaktiv</span></td>
+                    <td>2026-05-03</td>
+                    <td>2027-05-03</td>
+                    <td>Fullt inlöst</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="bo-muted" style={{ marginTop: 10 }}>Tabellen ovan visar exempeldata endast för att illustrera kolumnerna.</p>
+
+            <BoShot
+              src="/images/backoffice/06-presentkort.png"
+              alt="Backoffice – Transaktioner, fliken Presentkort"
+              caption="Transaktioner – Presentkort: saldo, status och användningshistorik."
+              onZoom={onZoom}
+            />
+          </section>
+
+        </div>
+      </div>
     </section>
   )
 }
@@ -613,13 +1034,37 @@ function BackofficeTab({ brand }) {
 // Två stora, färgstarka knappar för att välja system.
 // =============================================================
 function SystemPicker({ onPick }) {
+  const [showInfo, setShowInfo] = useState(false)
+
   return (
     <section className="sys-picker" aria-label="Välj system">
       <div className="sys-picker-glow" aria-hidden="true" />
 
       <div className="sys-picker-head">
         <span className="sys-picker-mark">P</span>
-        <h1 className="sys-picker-title">Välj system</h1>
+        <div className="sys-picker-title-row">
+          <h1 className="sys-picker-title">Välj system</h1>
+          <button
+            type="button"
+            className="sys-picker-info-btn"
+            onClick={() => setShowInfo((v) => !v)}
+            aria-expanded={showInfo}
+            aria-label="Om denna sida"
+            title="Om denna sida"
+          >
+            {showInfo ? '✕' : 'ⓘ'}
+          </button>
+        </div>
+        {showInfo && (
+          <div className="sys-picker-info" role="note">
+            Den här startsidan hjälper dig att välja vilket kassasystem lathunden
+            ska visa. Här väljer du mellan <strong>Purspot</strong> och{' '}
+            <strong>Moreflo · Northmill</strong> – två olika leverantörer med
+            egna produkter, priser och artiklar. Allt du behöver göra är att
+            klicka på det system du vill utforska. Du kan när som helst byta
+            system längst upp till höger.
+          </div>
+        )}
         <p className="sys-picker-sub">
           Vilket kassasystem ska få starta lathunden? Du kan alltid byta
           längst upp till höger när som helst.
@@ -673,6 +1118,7 @@ export default function App() {
   const [filter, setFilter] = useState(() => loadPersisted('pu_filter', 'Alla'))
   const [zoomDevice, setZoomDevice] = useState(null)
   const [infoDevice, setInfoDevice] = useState(null)
+  const [boZoom, setBoZoom] = useState(null)
   const [showSystemPicker, setShowSystemPicker] = useState(() => {
     try {
       return !window.localStorage.getItem('pu_brand')
@@ -686,6 +1132,7 @@ export default function App() {
   useEffect(() => savePersisted('pu_brand', brand), [brand])
   useEffect(() => savePersisted('pu_tab', tab), [tab])
   useEffect(() => savePersisted('pu_filter', filter), [filter])
+  useEffect(() => setBoZoom(null), [tab, brand])
 
   const pickSystem = (next) => {
     setBrand(next)
@@ -788,7 +1235,7 @@ export default function App() {
         )}
         {tab === 'paket' && <PackageBuilder />}
         {tab === 'softpos' && <SoftposTab />}
-        {tab === 'backoffice' && <BackofficeTab brand={brand} />}
+        {tab === 'backoffice' && <BackofficeTab brand={brand} onZoom={setBoZoom} />}
       </main>
 
       <footer className="footer">
@@ -797,6 +1244,7 @@ export default function App() {
 
       <InfoModal device={infoDevice} brand={brand} onClose={() => setInfoDevice(null)} />
       <ImageLightbox device={zoomDevice} onClose={() => setZoomDevice(null)} />
+      <GenericLightbox img={boZoom} onClose={() => setBoZoom(null)} />
     </div>
   )
 }
