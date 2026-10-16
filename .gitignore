@@ -4,3 +4,6 @@ dist/
 
 # Local Netlify folder
 .netlify
+
+# Lokal kunddatabas (server/data/customers.json)
+server/data/

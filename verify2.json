@@ -1,0 +1,314 @@
+[
+ {
+  "ok": true,
+  "msg": "320px burger synlig"
+ },
+ {
+  "ok": true,
+  "msg": "320px flikar gömda i header"
+ },
+ {
+  "ok": true,
+  "msg": "320px segmenterad växlare synlig under header"
+ },
+ {
+  "ok": true,
+  "msg": "320px ingen overflow (stängt)"
+ },
+ {
+  "ok": true,
+  "msg": "320px drawer öppnas"
+ },
+ {
+  "ok": true,
+  "msg": "320px drawer har 4 flikar (har 4)"
+ },
+ {
+  "ok": true,
+  "msg": "320px drawer-flikar >= 44px (min 52)"
+ },
+ {
+  "ok": true,
+  "msg": "320px body scroll-låst i drawer"
+ },
+ {
+  "ok": true,
+  "msg": "320px ingen overflow (drawer öppen)"
+ },
+ {
+  "ok": true,
+  "msg": "320px drawer stängs via backdrop"
+ },
+ {
+  "ok": true,
+  "msg": "320px segmentväxlare byter till flo (💜 Moreflo/Northmill)"
+ },
+ {
+  "ok": true,
+  "msg": "320px ingen overflow efter byte till flo"
+ },
+ {
+  "ok": true,
+  "msg": "320px TOC har 4 accordion-grupper"
+ },
+ {
+  "ok": true,
+  "msg": "320px första kategorin autoöppnad (scroll-spy)"
+ },
+ {
+  "ok": true,
+  "msg": "320px Rapporter-accordion visar 8 subobjekt (har 8)"
+ },
+ {
+  "ok": true,
+  "msg": "320px subobjekt >= 44px (min 44)"
+ },
+ {
+  "ok": true,
+  "msg": "320px endast en accordion öppen åt gången"
+ },
+ {
+  "ok": true,
+  "msg": "320px ingen overflow med accordion öppen"
+ },
+ {
+  "ok": true,
+  "msg": "360px burger synlig"
+ },
+ {
+  "ok": true,
+  "msg": "360px flikar gömda i header"
+ },
+ {
+  "ok": true,
+  "msg": "360px segmenterad växlare synlig under header"
+ },
+ {
+  "ok": true,
+  "msg": "360px ingen overflow (stängt)"
+ },
+ {
+  "ok": true,
+  "msg": "360px drawer öppnas"
+ },
+ {
+  "ok": true,
+  "msg": "360px drawer har 4 flikar (har 4)"
+ },
+ {
+  "ok": true,
+  "msg": "360px drawer-flikar >= 44px (min 52)"
+ },
+ {
+  "ok": true,
+  "msg": "360px body scroll-låst i drawer"
+ },
+ {
+  "ok": true,
+  "msg": "360px ingen overflow (drawer öppen)"
+ },
+ {
+  "ok": true,
+  "msg": "360px drawer stängs via backdrop"
+ },
+ {
+  "ok": true,
+  "msg": "360px segmentväxlare byter till flo (💜 Moreflo/Northmill)"
+ },
+ {
+  "ok": true,
+  "msg": "360px ingen overflow efter byte till flo"
+ },
+ {
+  "ok": true,
+  "msg": "360px TOC har 4 accordion-grupper"
+ },
+ {
+  "ok": true,
+  "msg": "360px första kategorin autoöppnad (scroll-spy)"
+ },
+ {
+  "ok": true,
+  "msg": "360px Rapporter-accordion visar 8 subobjekt (har 8)"
+ },
+ {
+  "ok": true,
+  "msg": "360px subobjekt >= 44px (min 44)"
+ },
+ {
+  "ok": true,
+  "msg": "360px endast en accordion öppen åt gången"
+ },
+ {
+  "ok": true,
+  "msg": "360px ingen overflow med accordion öppen"
+ },
+ {
+  "ok": true,
+  "msg": "412px burger synlig"
+ },
+ {
+  "ok": true,
+  "msg": "412px flikar gömda i header"
+ },
+ {
+  "ok": true,
+  "msg": "412px segmenterad växlare synlig under header"
+ },
+ {
+  "ok": true,
+  "msg": "412px ingen overflow (stängt)"
+ },
+ {
+  "ok": true,
+  "msg": "412px drawer öppnas"
+ },
+ {
+  "ok": true,
+  "msg": "412px drawer har 4 flikar (har 4)"
+ },
+ {
+  "ok": true,
+  "msg": "412px drawer-flikar >= 44px (min 52)"
+ },
+ {
+  "ok": true,
+  "msg": "412px body scroll-låst i drawer"
+ },
+ {
+  "ok": true,
+  "msg": "412px ingen overflow (drawer öppen)"
+ },
+ {
+  "ok": true,
+  "msg": "412px drawer stängs via backdrop"
+ },
+ {
+  "ok": true,
+  "msg": "412px segmentväxlare byter till flo (💜 Moreflo/Northmill)"
+ },
+ {
+  "ok": true,
+  "msg": "412px ingen overflow efter byte till flo"
+ },
+ {
+  "ok": true,
+  "msg": "412px TOC har 4 accordion-grupper"
+ },
+ {
+  "ok": true,
+  "msg": "412px första kategorin autoöppnad (scroll-spy)"
+ },
+ {
+  "ok": true,
+  "msg": "412px Rapporter-accordion visar 8 subobjekt (har 8)"
+ },
+ {
+  "ok": true,
+  "msg": "412px subobjekt >= 44px (min 44)"
+ },
+ {
+  "ok": true,
+  "msg": "412px endast en accordion öppen åt gången"
+ },
+ {
+  "ok": true,
+  "msg": "412px ingen overflow med accordion öppen"
+ },
+ {
+  "ok": true,
+  "msg": "480px burger synlig"
+ },
+ {
+  "ok": true,
+  "msg": "480px flikar gömda i header"
+ },
+ {
+  "ok": true,
+  "msg": "480px segmenterad växlare synlig under header"
+ },
+ {
+  "ok": true,
+  "msg": "480px ingen overflow (stängt)"
+ },
+ {
+  "ok": true,
+  "msg": "480px drawer öppnas"
+ },
+ {
+  "ok": true,
+  "msg": "480px drawer har 4 flikar (har 4)"
+ },
+ {
+  "ok": true,
+  "msg": "480px drawer-flikar >= 44px (min 52)"
+ },
+ {
+  "ok": true,
+  "msg": "480px body scroll-låst i drawer"
+ },
+ {
+  "ok": true,
+  "msg": "480px ingen overflow (drawer öppen)"
+ },
+ {
+  "ok": true,
+  "msg": "480px drawer stängs via backdrop"
+ },
+ {
+  "ok": true,
+  "msg": "480px segmentväxlare byter till flo (💜 Moreflo/Northmill)"
+ },
+ {
+  "ok": true,
+  "msg": "480px ingen overflow efter byte till flo"
+ },
+ {
+  "ok": true,
+  "msg": "480px TOC har 4 accordion-grupper"
+ },
+ {
+  "ok": true,
+  "msg": "480px första kategorin autoöppnad (scroll-spy)"
+ },
+ {
+  "ok": true,
+  "msg": "480px Rapporter-accordion visar 8 subobjekt (har 8)"
+ },
+ {
+  "ok": true,
+  "msg": "480px subobjekt >= 44px (min 44)"
+ },
+ {
+  "ok": true,
+  "msg": "480px endast en accordion öppen åt gången"
+ },
+ {
+  "ok": true,
+  "msg": "480px ingen overflow med accordion öppen"
+ },
+ {
+  "ok": true,
+  "msg": "768px desktop-layout bibehålls (burger dold, flikar synliga, segment dold)"
+ },
+ {
+  "ok": true,
+  "msg": "768px ingen overflow (backoffice)"
+ },
+ {
+  "ok": true,
+  "msg": "1024px ingen overflow (backoffice)"
+ },
+ {
+  "ok": true,
+  "msg": "1366px ingen overflow (backoffice)"
+ },
+ {
+  "ok": false,
+  "msg": "320px inga interaktiva element under 44px höjd (kvar: BUTTON.card-link)"
+ },
+ {
+  "ok": false,
+  "msg": "412px inga interaktiva element under 44px höjd (kvar: BUTTON.card-link)"
+ }
+]

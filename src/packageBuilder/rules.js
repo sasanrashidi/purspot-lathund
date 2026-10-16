@@ -64,7 +64,7 @@ const EVENT_DEVICES = [
   // Kortterminaler
   'rx5000', 'dx8000', 'a920',
   // Tillbehör
-  'cloudprinter', 'kassalada'
+  'kassalada'
 ]
 
 export const PURSPOT_RULES = {
@@ -102,7 +102,8 @@ export const PURSPOT_RULES = {
       label: 'Livsmedel',
       icon: '🛒',
       hint: 'Kassa, terminal och tillbehör',
-      devices: GROCERY_DEVICES
+      devices: GROCERY_DEVICES,
+      accessoriesUnconditional: true
     },
     event: {
       id: 'event',

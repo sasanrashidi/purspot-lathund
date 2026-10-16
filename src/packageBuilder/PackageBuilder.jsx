@@ -5,6 +5,7 @@ import { devices as deviceCatalog } from '../data'
 import BusinessSelector from './BusinessSelector'
 import DevicePicker from './DevicePicker'
 import PackageSummary from './PackageSummary'
+import SaveToCustomer from './SaveToCustomer'
 
 // =============================================================
 // Tillstånds-persistens – Paketbyggarens val sparas i
@@ -46,7 +47,7 @@ function pkgSave(key, value) {
 // och tar emot `rules`, `selected` (objekt id -> mode) samt
 // återanropsfunktioner. Inga regler hårdkodas i UI:t.
 // =============================================================
-export default function PackageBuilder() {
+export default function PackageBuilder({ loadFor, onLoadHandled }) {
   const rules = resolveRules('purspot')
   const [businessId, setBusinessId] = useState(() => pkgLoad('businessId', firstBusinessId(rules)))
   const [selected, setSelected] = useState(() => pkgLoad('selected', {}))
@@ -61,11 +62,29 @@ export default function PackageBuilder() {
     return migrated
   })
   const [contracts, setContracts] = useState(() => pkgLoad('contracts', {}))
+  const [linkedCustomerId, setLinkedCustomerId] = useState(() => pkgLoad('linkedCustomerId', ''))
 
   useEffect(() => pkgSave('businessId', businessId), [businessId])
   useEffect(() => pkgSave('selected', selected), [selected])
   useEffect(() => pkgSave('quantities', quantities), [quantities])
   useEffect(() => pkgSave('contracts', contracts), [contracts])
+  useEffect(() => pkgSave('linkedCustomerId', linkedCustomerId), [linkedCustomerId])
+
+  // Ladda ett kundpaket ("Öppna i Paketbyggare" från Kundregistret).
+  useEffect(() => {
+    if (!loadFor) return
+    if (loadFor.packageData) {
+      const pd = loadFor.packageData
+      const nextBusiness = pd.businessId || firstBusinessId(rules)
+      const res = reconcileSelection(rules, pd.selected || {}, nextBusiness)
+      setBusinessId(nextBusiness)
+      setSelected(res.selection)
+      setQuantities(pd.quantities || {})
+      setContracts(pd.contracts || {})
+    }
+    if (loadFor.id) setLinkedCustomerId(loadFor.id)
+    if (onLoadHandled) onLoadHandled()
+  }, [loadFor])
 
   // =========================================================
   // Reconcile – applicerar en förändring och låter logiken
@@ -205,6 +224,15 @@ export default function PackageBuilder() {
           groups={groups}
           businessType={businessMeta}
           onRemove={handleRemove}
+        />
+
+        <SaveToCustomer
+          businessId={businessId}
+          selected={selected}
+          quantities={quantities}
+          contracts={contracts}
+          linkedCustomerId={linkedCustomerId}
+          onLinkedCustomerChange={setLinkedCustomerId}
         />
       </aside>
     </div>

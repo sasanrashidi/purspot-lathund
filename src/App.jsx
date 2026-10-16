@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { categories, devices, floCategories, floDevices, brands, softposSteps, softposFeatures, formatSEK } from './data'
+import { categories, devices, floCategories, floDevices, brands, formatSEK } from './data'
 import PackageBuilder from './packageBuilder/PackageBuilder'
+import CustomerRegistry from './CustomerRegistry'
+import { startCustomerSync, stopCustomerSync } from './customers'
 
 // =============================================================
 // Tillstånds-persistens – sparar enkla värden i localStorage så
@@ -509,85 +511,10 @@ function GenericLightbox({ img, onClose }) {
   )
 }
 
-function PhoneMockup() {
-  return (
-    <div className="phone-mockup">
-      <div className="phone-frame">
-        <div className="phone-notch" />
-        <div className="phone-screen">
-          <div className="phone-header">Purspot SoftPOS</div>
-          <div className="phone-amount">149,00 kr</div>
-          <div className="phone-hint">Kunden håller kortet mot baksidan</div>
-          <div className="phone-wave">〰️〰️〰️</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SoftposTab() {
-  return (
-    <section className="softpos-section">
-      <h1 className="section-title">Purspot SoftPOS</h1>
-      <p className="section-sub">
-        Förvandla en vanlig Android-smartphone till en godkänd kassa och kortterminal
-        utan extern hårdvara.
-      </p>
-
-      <div className="softpos-intro-row">
-        <div className="softpos-intro-text">
-          <h2>Hur fungerar det?</h2>
-          <p>
-            Med Purspot SoftPOS kan du ta emot kortbetalningar direkt på en Android-mobil.
-            Appen gör om din telefon till en PCI-godkänd betalterminal genom att använda
-            NFC-chippet – ingen extra terminal behövs.
-          </p>
-          <div className="softpos-req-box">
-            <h4>Krav</h4>
-            <ul>
-              <li>Android 9.1 eller högre</li>
-              <li>Enhet med NFC</li>
-              <li>Purspot SoftPOS-appen från Google Play</li>
-            </ul>
-          </div>
-        </div>
-        <PhoneMockup />
-      </div>
-
-      <h2 className="subsection-title">Flöde: Så fungerar en betalning</h2>
-      <div className="flow-steps">
-        {softposSteps.map((step, i) => (
-          <React.Fragment key={step.num}>
-            <div className="flow-step">
-              <div className="flow-num">{step.num}</div>
-              <div className="flow-icon">{step.icon}</div>
-              <div className="flow-label">{step.label}</div>
-            </div>
-            {i < softposSteps.length - 1 && <div className="flow-arrow">→</div>}
-          </React.Fragment>
-        ))}
-      </div>
-
-      <h2 className="subsection-title">Funktioner</h2>
-      <div className="features-grid">
-        {softposFeatures.map(f => (
-          <div key={f.title} className="feature-card">
-            <div className="feature-icon">{f.icon}</div>
-            <div>
-              <div className="feature-title">{f.title}</div>
-              <div className="feature-desc">{f.desc}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function BoShot({ src, alt, caption, onZoom }) {
+function BoShot({ src, alt, caption, onZoom, small }) {
   return (
     <figure
-      className="bo-shot"
+      className={`bo-shot${small ? ' bo-shot-sm' : ''}`}
       role="button"
       tabIndex="0"
       aria-label={`Förstora bild: ${caption}`}
@@ -621,29 +548,56 @@ const boIconWarn = (
 )
 
 const boNav = [
-  { label: 'Start', items: [{ id: 'bo-atkomst', label: 'Åtkomst & Inloggning' }] },
   {
-    label: 'Försäljning',
+    id: 'bo-oversikt',
+    label: 'Översikt',
+    items: [{ id: 'bo-oversikt', label: 'Översikt' }]
+  },
+  {
+    id: 'bo-rapporter',
+    label: 'Rapporter',
     items: [
-      { id: 'bo-oversikt', label: 'Översikt' },
-      { id: 'bo-rapporter', label: 'Rapporter & Automatisk Bokföring' },
-      { id: 'bo-auto-bokforing', label: 'Automatisk bokföring & e-post', sub: true }
+      { id: 'bo-report-x', label: 'X-Rapport' },
+      { id: 'bo-report-z', label: 'Z-Rapporter' },
+      { id: 'bo-report-zdag', label: 'Z-Dagsrapport' },
+      { id: 'bo-report-period', label: 'Periodrapporter' },
+      { id: 'bo-report-artikel', label: 'Artikelrapport' },
+      { id: 'bo-report-tid', label: 'Tidsrapport Personal' },
+      { id: 'bo-report-tim', label: 'Timförsäljningsrapport' },
+      { id: 'bo-report-kasso', label: 'Kassörapport' }
     ]
   },
   {
+    id: 'bo-transaktioner',
     label: 'Transaktioner',
     items: [
-      { id: 'bo-transaktioner', label: 'Transaktioner' },
-      { id: 'bo-kvitton', label: 'Kvitton', sub: true },
-      { id: 'bo-ordrar', label: 'Ordrar', sub: true },
-      { id: 'bo-presentkort', label: 'Presentkort', sub: true }
+      { id: 'bo-kvitton', label: 'Kvitton' },
+      { id: 'bo-ordrar', label: 'Ordrar' }
+    ]
+  },
+  {
+    id: 'bo-produkter',
+    label: 'Produkter',
+    items: [
+      { id: 'bo-p-kategorier', label: 'Kategorier' },
+      { id: 'bo-p-artiklar', label: 'Produkter (Artikelregister)' },
+      { id: 'bo-p-prislistor', label: 'Prislistor' },
+      { id: 'bo-p-tillval', label: 'Tillvalskategorier & Tillval' },
+      { id: 'bo-p-tillvalslistor', label: 'Tillvalslistor & Tillvalsmappning' },
+      { id: 'bo-p-vyer', label: 'Produktvyer & Produktmappning' },
+      { id: 'bo-p-skrivarstationer', label: 'Skrivarstationer & Åtgärdshändelser' },
+      { id: 'bo-p-import', label: 'Import / Export & Menybyggare (AI)' }
     ]
   }
 ]
 
 const BO_TARGETS = [
-  'bo-atkomst', 'bo-oversikt', 'bo-rapporter', 'bo-auto-bokforing',
-  'bo-transaktioner', 'bo-kvitton', 'bo-ordrar', 'bo-presentkort'
+  'bo-oversikt', 'bo-rapporter',
+  'bo-report-x', 'bo-report-z', 'bo-report-zdag', 'bo-report-period',
+  'bo-report-artikel', 'bo-report-tid', 'bo-report-tim', 'bo-report-kasso',
+  'bo-transaktioner', 'bo-kvitton', 'bo-ordrar',
+  'bo-produkter', 'bo-p-kategorier', 'bo-p-artiklar', 'bo-p-prislistor',
+  'bo-p-tillval', 'bo-p-tillvalslistor', 'bo-p-vyer', 'bo-p-skrivarstationer', 'bo-p-import'
 ]
 
 const boMetrics = [
@@ -657,22 +611,31 @@ const boMetrics = [
 ]
 
 const boReports = [
-  { tag: 'Dag', n: 'X-Rapport', d: 'Total försäljning sedan start.' },
-  { tag: 'Dag', n: 'Z-Rapport', d: 'Sammanställd dagsrapport för alla enheter. Syns dagen efter, eftersom dagsavslut sker automatiskt.' },
-  { tag: 'Dag', n: 'Z-Dagsrapport', d: 'Dagsrapport uppdelad per individuell enhet (t.ex. huvudkassa, expresskassa).' },
-  { n: 'Periodrapporter', d: 'Försäljning samlad för en vald tidsperiod.' },
-  { n: 'Artikelrapport', d: 'Försäljning uppdelad per artikel.' },
-  { n: 'Tidrapport Personal', d: 'Arbetstider och närvaro för personalen.' },
-  { n: 'Timförsäljningsrapport', d: 'Försäljning uppdelad per timme.' },
-  { n: 'Kassörapport', d: 'Underlag för kassaräkning och avstämning.' },
-  { n: 'Journaler', d: 'Händelser och loggar från kassan.' },
-  { n: 'Presentkortsrapport', d: 'Översikt över utfärdade och inlösta presentkort.' }
+  { id: 'bo-report-x', tag: 'Dag', n: 'X-Rapport', d: 'Total försäljning sedan start.' },
+  { id: 'bo-report-z', tag: 'Dag', n: 'Z-Rapporter', d: 'Sammanställda dagsrapporter för alla enheter. Syns dagen efter, eftersom dagsavslut sker automatiskt.' },
+  { id: 'bo-report-zdag', tag: 'Dag', n: 'Z-Dagsrapport', d: 'Dagsrapport uppdelad per individuell enhet (t.ex. huvudkassa, expresskassa).' },
+  { id: 'bo-report-period', n: 'Periodrapporter', d: 'Försäljning samlad för en vald tidsperiod.' },
+  { id: 'bo-report-artikel', n: 'Artikelrapport', d: 'Försäljning uppdelad per artikel.' },
+  { id: 'bo-report-tid', n: 'Tidsrapport Personal', d: 'Arbetstider och närvaro för personalen.' },
+  { id: 'bo-report-tim', n: 'Timförsäljningsrapport', d: 'Försäljning uppdelad per timme.' },
+  { id: 'bo-report-kasso', n: 'Kassörapport', d: 'Underlag för kassaräkning och avstämning.' },
+  { id: 'bo-report-journal', n: 'Journaler', d: 'Händelser och loggar från kassan.' },
+  { id: 'bo-report-presentkort', n: 'Presentkortsrapport', d: 'Översikt över utfärdade och inlösta presentkort.' }
 ]
 
 function BackofficeTab({ brand, onZoom }) {
   const meta = brands[brand]
   const [activeId, setActiveId] = useState('bo-atkomst')
   const [copied, setCopied] = useState(false)
+  const [openCat, setOpenCat] = useState(null)
+
+  const isMobile = () => window.matchMedia('(max-width: 767px)').matches
+
+  useEffect(() => {
+    if (!isMobile()) return
+    const g = boNav.find(g => g.id === activeId || g.items.some(it => it.id === activeId))
+    if (g) setOpenCat(g.id)
+  }, [activeId])
 
   useEffect(() => {
     const els = BO_TARGETS.map(id => document.getElementById(id)).filter(Boolean)
@@ -725,21 +688,41 @@ function BackofficeTab({ brand, onZoom }) {
 
       <div className="bo-guide">
         <aside className="bo-toc" aria-label="Snabbnavigering">
-          {boNav.map(g => (
-            <div key={g.label}>
-              <p className="bo-toc-label">{g.label}</p>
-              {g.items.map(it => (
+          {boNav.map(g => {
+            const catActive = activeId === g.id || g.items.some(it => it.id === activeId)
+            const open = openCat === g.id
+            return (
+              <div key={g.id} className={`bo-toc-group${open ? ' open' : ''}`}>
                 <a
-                  key={it.id}
-                  href={'#' + it.id}
-                  className={`bo-toc-link${it.sub ? ' bo-toc-sub' : ''}${activeId === it.id ? ' active' : ''}`}
+                  href={'#' + g.id}
+                  className={`bo-toc-link bo-toc-cat${catActive ? ' active' : ''}`}
+                  aria-expanded={open}
+                  onClick={e => {
+                    if (isMobile()) {
+                      e.preventDefault()
+                      setOpenCat(open ? null : g.id)
+                    }
+                  }}
                 >
-                  {it.label}
+                  <span className="bo-toc-cat-label">{g.label}</span>
+                  <span className="bo-toc-chev" aria-hidden="true">▾</span>
                 </a>
-              ))}
-            </div>
-          ))}
-          <p className="bo-toc-foot">4 sektioner · 6 skärmbilder</p>
+                <div className="bo-toc-subs">
+                  {g.items.map(it => (
+                    <a
+                      key={it.id}
+                      href={'#' + it.id}
+                      className={`bo-toc-link bo-toc-sub${activeId === it.id ? ' active' : ''}`}
+                      onClick={() => isMobile() && setOpenCat(null)}
+                    >
+                      {it.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+          <p className="bo-toc-foot">4 kategorier · 28 skärmbilder</p>
         </aside>
 
         <div className="bo-body">
@@ -828,8 +811,8 @@ function BackofficeTab({ brand, onZoom }) {
 
             <h3 className="bo-first">Rapporttyper</h3>
             <div className="bo-report-grid">
-              {boReports.map(r => (
-                <div className="bo-report" key={r.n}>
+{boReports.map(r => (
+            <div className="bo-report" id={r.id} key={r.n}>
                   <b>{r.tag && <span className="bo-tag">{r.tag}</span>}{r.n}</b>
                   <span>{r.d}</span>
                 </div>
@@ -1023,6 +1006,300 @@ function BackofficeTab({ brand, onZoom }) {
             />
           </section>
 
+          {/* ---------- 5. Produkter ---------- */}
+          <div className="bo-sec-head" id="bo-produkter">
+            <span className="bo-sec-num">5</span>
+            <h2>Produkter</h2>
+          </div>
+          <section className="bo-card">
+            <p className="bo-lead" style={{ margin: 0 }}>Fliken <strong>"Produkter"</strong> är där du bygger hela menyn – kategorier, artiklar, priser, tillval, produktvyer och bongutskrift. Nedan går vi igenom arbetsflödet från grunden.</p>
+          </section>
+
+          <section className="bo-card" id="bo-p-kategorier">
+            <h3 className="bo-first">Kategorier</h3>
+            <p className="bo-muted">Kategorierna byggs i två steg: först en <strong>rapportkategori</strong> som styr moms och bokföring, sedan en <strong>produktkategori</strong> som bygger själva menyn i kassan.</p>
+
+            <h4>Steg 1 – Skapa rapportkategori</h4>
+            <p>Klicka på <strong>"Skapa rapportkategori"</strong> och fyll i:</p>
+            <ul className="bo-list">
+              <li><strong>Namn</strong> och <strong>Beskrivning</strong> (valfritt).</li>
+              <li><strong>Standardmoms</strong> – 0%, 6%, 12% eller 25%.</li>
+              <li><strong>Standardkonto</strong> och <strong>alternativa kontoinställningar</strong>.</li>
+              <li><strong>Färg</strong> samt <strong>Ordning</strong> (1 visas först).</li>
+            </ul>
+            <div className="bo-note-box info">
+              {boIconInfo}
+              <p><strong>VIKTIG REGEL:</strong> aktivera <strong>"Tillåt ändring av take away-moms"</strong> för att automatiskt sänka momsen från 12% till 6% vid Take Away-beställningar.</p>
+            </div>
+            <BoShot
+              src="/images/backoffice/products/bro-p01-skapa-rapportkategori.png"
+              alt="Backoffice – Produkter, skapa rapportkategori"
+              caption="Skapa rapportkategori: namn, beskrivning, moms, konto, färg och ordning."
+              onZoom={onZoom}
+              small
+            />
+
+            <h4>Steg 2 – Skapa produktkategori</h4>
+            <p>Klicka på <strong>"Skapa Produktkategori"</strong> och fyll i:</p>
+            <ul className="bo-list">
+              <li><strong>Namn</strong> – syns i kassan.</li>
+              <li><strong>Ordning</strong> – 1 hamnar längst till vänster i menyn.</li>
+              <li><strong>Färg</strong> och koppling till din <strong>Rapportkategori</strong>.</li>
+              <li><strong>Bild/ikon</strong> – rekommenderas en SVG-fil.</li>
+            </ul>
+            <BoShot
+              src="/images/backoffice/products/bro-p02-skapa-produktkategori.png"
+              alt="Backoffice – Produkter, skapa produktkategori"
+              caption="Skapa produktkategori: namn, ordning, färg, rapportkategori och ikon."
+              onZoom={onZoom}
+              small
+            />
+
+            <h4>Översikt över kategorierna</h4>
+            <BoShot
+              src="/images/backoffice/products/bro-p03-kategorier-oversikt.png"
+              alt="Backoffice – Produkter, översikt över kategorierna"
+              caption="Kategorier – översikt över rapport- och produktkategorier."
+              onZoom={onZoom}
+            />
+          </section>
+
+          <section className="bo-card" id="bo-p-artiklar">
+            <h3 className="bo-first">Produkter (Artikelregister)</h3>
+
+            <h4>Skapa produkt</h4>
+            <p>Klicka på <strong>"Skapa Produkt"</strong> och fyll i:</p>
+            <ul className="bo-list">
+              <li><strong>Namn</strong>, <strong>Beskrivning</strong>, <strong>Rapportkategori</strong> och <strong>Produktkategori</strong>.</li>
+              <li><strong>Pris</strong> och <strong>Moms</strong>.</li>
+              <li><strong>Tillvalslista</strong>, <strong>Skrivarstation</strong>, <strong>Färg</strong> och <strong>Produktnummer</strong>.</li>
+            </ul>
+            <div className="bo-note-box info">
+              {boIconInfo}
+              <p><strong>Nummerregel:</strong> produktnumret måste vara unikt. Börja gärna på <strong>1000</strong> och hoppa med 5 siffror per artikel (<strong>1000, 1005, 1010</strong>) för att ge utrymme åt framtida artiklar.</p>
+            </div>
+            <p>Kryssrutor på produkten:</p>
+            <ul className="bo-list">
+              <li><strong>"Visa produktalternativ vid köp"</strong> – öppnar tillvalen i kassan.</li>
+              <li><strong>"Tillåt öppen antal och mängd"</strong> – låter kassabiträdet ändra antal fritt.</li>
+              <li><strong>"Tillåt öppen rabatt"</strong>.</li>
+              <li><strong>"Blockera take away/hemleverans"</strong>.</li>
+              <li><strong>"Synlig"</strong> – <strong>MÅSTE VARA AKTIV</strong>.</li>
+              <li><strong>"Online"</strong> – visar produkten i webbutiken.</li>
+            </ul>
+            <BoShot
+              src="/images/backoffice/products/bro-p05-skapa-produkt.png"
+              alt="Backoffice – Produkter, skapa produkt"
+              caption="Skapa produkt: namn, priser, kategorier, tillval, skrivarstation och kryssrutor."
+              onZoom={onZoom}
+            />
+
+            <h4>Lagerhantering</h4>
+            <p>Klicka på <strong>"Visa fler inställningar"</strong> längst ner i skapa-rutan. Bocka i <strong>"Använd Lager"</strong> och fyll i antal. <strong>Systemet räknar ner automatiskt</strong> vid varje försäljning.</p>
+            <BoShot
+              src="/images/backoffice/products/bro-p06-lagerhantering.png"
+              alt="Backoffice – Produkter, lagerhantering"
+              caption="Lagerhantering: sätt på ”Använd Lager” och systemet räknar ner automatiskt."
+              onZoom={onZoom}
+              small
+            />
+
+            <h4>Kopiera &amp; snabbredigera</h4>
+            <ul className="bo-list">
+              <li><strong>Kopiera produkt</strong> via ikonen till höger i listan, eller välj <strong>"Spara och Kopiera"</strong> vid skapandet – ändra endast Namn, Pris och Produktnr.</li>
+              <li><strong>Snabbredigering:</strong> klicka på knappen <strong>"Redigera"</strong> bredvid "Skapa produkt" för att göra samtliga fält i artikellistan redigerbara direkt i tabellen – nummer, namn, pris, lager, kategorier, färger och skrivarstationer.</li>
+            </ul>
+            <BoShot
+              src="/images/backoffice/products/bro-p04-produktlista.png"
+              alt="Backoffice – Produkter, produktlista"
+              caption="Produktlista – samtliga artiklar med pris, kategori, lager och status."
+              onZoom={onZoom}
+            />
+            <BoShot
+              src="/images/backoffice/products/bro-p07-snabbredigera-artiklar.png"
+              alt="Backoffice – Produkter, snabbredigering av artiklar"
+              caption="Snabbredigering: redigera flera artiklar direkt i tabellen via knappen ”Redigera”."
+              onZoom={onZoom}
+            />
+          </section>
+
+          <section className="bo-card" id="bo-p-prislistor">
+            <h3 className="bo-first">Prislistor</h3>
+            <ul className="bo-list">
+              <li>Används för att sätta <strong>olika priser</strong> på artiklar baserat på leveranstyp, t.ex. <strong>Äta här</strong> vs <strong>Take Away</strong>.</li>
+              <li>Skapa prislistan och koppla den under <strong>"Leveranstyp Prislistor"</strong>.</li>
+              <li>Välj sedan prislistan längst ner på den enskilda artikeln under <strong>"Redigera produkt"</strong>.</li>
+            </ul>
+            <BoShot
+              src="/images/backoffice/products/bro-p08-prislistor.png"
+              alt="Backoffice – Produkter, prislistor"
+              caption="Prislistor: olika priser per leveranstyp, t.ex. Äta här vs Take Away."
+              onZoom={onZoom}
+            />
+          </section>
+
+          <section className="bo-card" id="bo-p-tillval">
+            <h3 className="bo-first">Tillvalskategorier &amp; Tillval</h3>
+
+            <p className="bo-muted">Så här syns tillvalskategorin under en artikel samt hur en kategoriruta ser ut:</p>
+
+            <h4>Tillvalskategorier</h4>
+            <p>Skapa kategorier/mappar först (t.ex. <strong>Ingredienser</strong>, <strong>Stekgrad</strong>, <strong>Dryck</strong>) med inställningar för <strong>Ordning</strong> samt <strong>Minimum-</strong> och <strong>Maximum-värde</strong> för antal val.</p>
+            <BoShot
+              src="/images/backoffice/products/bro-p09-tillvalskategori-vy.png"
+              alt="Backoffice – Produkter, tillvalskategori som visas under en artikel"
+              caption="Tillvalskategori som visas under en artikel i kassan."
+              onZoom={onZoom}
+            />
+            <BoShot
+              src="/images/backoffice/products/bro-p10-skapa-tillvalskategori.png"
+              alt="Backoffice – Produkter, skapa tillvalskategori"
+              caption="Skapa tillvalskategori: namn, ordning samt min/max antal val."
+              onZoom={onZoom}
+            />
+
+            <h4>Tillval</h4>
+            <p>Skapa unika tillval med egna produktnummer:</p>
+            <ul className="bo-list">
+              <li><strong>Produktnummer</strong> – hoppa med 5 siffror.</li>
+              <li><strong>Pris</strong> (kan vara 0 kr), <strong>Moms</strong> och <strong>Synlig</strong>.</li>
+              <li><strong>Tillvalskategori</strong>, <strong>Rapportkategori</strong> och <strong>Skrivarstation</strong>.</li>
+              <li><strong>Min/Max-mängd</strong> per tillval.</li>
+            </ul>
+            <p>Använd knappen <strong>"Redigera"</strong> i tillvalslistan för snabbredigering av alla tillval direkt i tabellen.</p>
+            <BoShot
+              src="/images/backoffice/products/bro-p11-tillval-lista.png"
+              alt="Backoffice – Produkter, tillvalslista"
+              caption="Tillval – listan över samtliga tillval med pris, moms och status."
+              onZoom={onZoom}
+            />
+            <BoShot
+              src="/images/backoffice/products/bro-p12-skapa-tillval.png"
+              alt="Backoffice – Produkter, skapa tillval"
+              caption="Skapa tillval: namn, produktnummer, pris, moms, kategori och skrivarstation."
+              onZoom={onZoom}
+            />
+            <BoShot
+              src="/images/backoffice/products/bro-p13-snabbredigera-tillval.png"
+              alt="Backoffice – Produkter, snabbredigera tillval"
+              caption="Snabbredigering av tillval direkt i tabellen för snabbare ändringar."
+              onZoom={onZoom}
+            />
+          </section>
+
+          <section className="bo-card" id="bo-p-tillvalslistor">
+            <h3 className="bo-first">Tillvalslistor &amp; Tillvalsmappning</h3>
+
+            <h4>Tillvalslistor</h4>
+            <p>Klicka på <strong>"Skapa Tillvalslista"</strong>, namnge listan och sätt <strong>Status till Aktiv</strong>.</p>
+            <BoShot
+              src="/images/backoffice/products/bro-p14-tillvalslistor.png"
+              alt="Backoffice – Produkter, tillvalslistor"
+              caption="Tillvalslistor som kopplas till artiklarna."
+              onZoom={onZoom}
+            />
+
+            <h4>Tillvalsmappning</h4>
+            <p>Visar tillvalslistorna i kolumner. <strong>Kryssa i</strong> vilka tillval som ska ingå i vilken lista – <strong>sparas automatiskt</strong> vid klick.</p>
+            <BoShot
+              src="/images/backoffice/products/bro-p15-tillvalsmappning.png"
+              alt="Backoffice – Produkter, tillvalsmappning"
+              caption="Tillvalsmappning: bestäm vilka tillvalslistor som ska ha vilka tillval."
+              onZoom={onZoom}
+            />
+
+            <div className="bo-note-box info">
+              {boIconInfo}
+              <p>Koppla därefter tillvalslistan till önskad produkt under <strong>"Produkter"</strong>. Säkerställ att <strong>"Visa produktalternativ vid köp"</strong> är aktiverat på artikeln.</p>
+            </div>
+          </section>
+
+          <section className="bo-card" id="bo-p-vyer">
+            <h3 className="bo-first">Produktvyer &amp; Produktmappning</h3>
+
+            <h4>Produktvyer</h4>
+            <p>Skapa vyer för olika typer av kassor, t.ex. <strong>"Expresskassa"</strong>, <strong>"Huvudkassa"</strong> och <strong>"Minikassa"</strong>.</p>
+            <BoShot
+              src="/images/backoffice/products/bro-p16-produktvyer.png"
+              alt="Backoffice – Produkter, produktvyer"
+              caption="Produktvyer som skapas för att mappa huvudartiklar."
+              onZoom={onZoom}
+            />
+
+            <h4>Produktmappning</h4>
+            <p><strong>Kryssa i kolumnerna</strong> vilka produkter som ska visas i vilken produktvy – <strong>sparas automatiskt</strong>.</p>
+            <BoShot
+              src="/images/backoffice/products/bro-p17-produktmappning.png"
+              alt="Backoffice – Produkter, produktmappning"
+              caption="Produktmappning: välj vilka produktvyer som ska ha vilka artiklar."
+              onZoom={onZoom}
+            />
+          </section>
+
+          <section className="bo-card" id="bo-p-skrivarstationer">
+            <h3 className="bo-first">Skrivarstationer &amp; Åtgärdshändelser</h3>
+
+            <h4>Skrivarstationer</h4>
+            <p>Skapa stationer för bongutskrift – standard är <strong>BAR</strong> och <strong>KÖK</strong>.</p>
+            <BoShot
+              src="/images/backoffice/products/bro-p18-skrivarstationer.png"
+              alt="Backoffice – Produkter, skrivarstationer för bongutskrift"
+              caption="Skrivarstationer för bongutskrift."
+              onZoom={onZoom}
+            />
+
+            <h4>Åtgärdshändelser (regler för bongutskrift)</h4>
+            <p>Vanliga typer:</p>
+            <ul className="bo-list">
+              <li><strong>NewOrder</strong> – nya ordrar.</li>
+              <li><strong>NewParkingTicket</strong> – parkerade ordrar/bord.</li>
+              <li><strong>TicketQueue</strong> – gemensam bong till köket när flera betalar var för sig.</li>
+            </ul>
+            <p>Konfiguration: sätt <strong>Namn</strong>, <strong>Typ</strong>, <strong>Aktiverad</strong>, <strong>Ursprung</strong> (POS, Online, Wolt m.fl.) och <strong>Skrivarstationer</strong> (Bar/Kök).</p>
+            <ul className="bo-list">
+              <li><strong>Tillgängliga POS-enheter</strong> – klicka <strong>"Lägg till"</strong> under <strong>Notifiera</strong>.</li>
+              <li><strong>Tillgängliga Skrivare</strong> – klicka <strong>"Lägg till"</strong> under <strong>Skriv ut</strong>.</li>
+            </ul>
+            <BoShot
+              src="/images/backoffice/products/bro-p19-skapa-atgardshandelse.png"
+              alt="Backoffice – Produkter, skapa åtgärdshändelse"
+              caption="Skapa åtgärdshändelse: namn, typ, ursprung, enheter och skrivare."
+              onZoom={onZoom}
+            />
+            <BoShot
+              src="/images/backoffice/products/bro-p20-exempel-atgardshandelse.png"
+              alt="Backoffice – Produkter, exempel på åtgärdshändelse"
+              caption="Exempel på hur en åtgärdshändelse kan se ut."
+              onZoom={onZoom}
+            />
+          </section>
+
+          <section className="bo-card" id="bo-p-import">
+            <h3 className="bo-first">Import / Export &amp; Menybyggare (AI)</h3>
+
+            <h4>Import / Export</h4>
+            <p>Mallbaserad massuppladdning av Excel-menyer. Rekommendationen är att <strong>Purspot utför</strong> konverteringen åt kunden.</p>
+            <BoShot
+              src="/images/backoffice/products/bro-p21-import-export.png"
+              alt="Backoffice – Produkter, import och export av meny"
+              caption="Import / Export av meny via Excel-mall."
+              onZoom={onZoom}
+            />
+
+            <h4>Menybyggare (AI)</h4>
+            <p>AI-verktyg som läser av en menybild/PDF och <strong>skapar artiklar automatiskt</strong>.</p>
+            <div className="bo-note-box warn">
+              {boIconWarn}
+              <p><strong>OBS:</strong> kunden ska alltid <strong>granska och kontrollera</strong> resultatet efter uppladdning.</p>
+            </div>
+            <BoShot
+              src="/images/backoffice/products/bro-p22-menybyggare-ai.png"
+              alt="Backoffice – Produkter, Menybyggare AI-verktyget"
+              caption="Menybyggare (AI): skapar artiklar automatiskt från menybild/PDF."
+              onZoom={onZoom}
+            />
+          </section>
+
         </div>
       </div>
     </section>
@@ -1114,7 +1391,10 @@ function SystemPicker({ onPick }) {
 
 export default function App() {
   const [brand, setBrand] = useState(() => loadPersisted('pu_brand', 'purspot'))
-  const [tab, setTab] = useState(() => loadPersisted('pu_tab', 'hardware'))
+  const [tab, setTab] = useState(() => {
+    const saved = loadPersisted('pu_tab', 'hardware')
+    return saved === 'softpos' ? 'kunder' : saved
+  })
   const [filter, setFilter] = useState(() => loadPersisted('pu_filter', 'Alla'))
   const [zoomDevice, setZoomDevice] = useState(null)
   const [infoDevice, setInfoDevice] = useState(null)
@@ -1126,6 +1406,8 @@ export default function App() {
       return true
     }
   })
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [pkgLoad, setPkgLoad] = useState(null)
 
   const meta = brands[brand]
 
@@ -1133,6 +1415,20 @@ export default function App() {
   useEffect(() => savePersisted('pu_tab', tab), [tab])
   useEffect(() => savePersisted('pu_filter', filter), [filter])
   useEffect(() => setBoZoom(null), [tab, brand])
+  useEffect(() => {
+    startCustomerSync()
+    return () => stopCustomerSync()
+  }, [])
+  useEffect(() => {
+    if (!menuOpen) return
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+  }, [menuOpen])
 
   const pickSystem = (next) => {
     setBrand(next)
@@ -1146,8 +1442,24 @@ export default function App() {
     setFilter('Alla')
     setZoomDevice(null)
     setInfoDevice(null)
-    if (next === 'flo' && (tab === 'softpos' || tab === 'paket')) setTab('hardware')
+    if (next === 'flo' && (tab === 'kunder' || tab === 'paket')) setTab('hardware')
   }
+
+  const openCustomerInBuilder = (customer) => {
+    setPkgLoad({
+      id: customer.id,
+      packageData: customer.packageData || null
+    })
+    setTab('paket')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const navItems = [
+    { id: 'hardware', icon: '📱', label: 'Hårdvara' },
+    ...(brand === 'purspot' ? [{ id: 'paket', icon: '🧩', label: 'Paketbyggare' }] : []),
+    ...(brand === 'purspot' ? [{ id: 'kunder', icon: '👥', label: 'Kunder' }] : []),
+    { id: 'backoffice', icon: '⚙️', label: 'Backoffice' }
+  ]
 
   if (showSystemPicker) {
     return (
@@ -1187,14 +1499,19 @@ export default function App() {
             <span className="brand-mark">{meta.mark}</span>
             <span className="brand-text">LATHUNDEN</span>
           </button>
+          <button
+            type="button"
+            className="nav-burger"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Öppna meny"
+            aria-haspopup="true"
+            aria-expanded={menuOpen}
+          >
+            <span /><span /><span />
+          </button>
           <div className="nav-right">
             <div className="nav-tabs">
-              {[
-                { id: 'hardware', icon: '📱', label: 'Hårdvara' },
-                ...(brand === 'purspot' ? [{ id: 'paket', icon: '🧩', label: 'Paketbyggare' }] : []),
-                ...(brand === 'purspot' ? [{ id: 'softpos', icon: '💳', label: 'SoftPOS' }] : []),
-                { id: 'backoffice', icon: '⚙️', label: 'Backoffice' }
-              ].map(t => (
+              {navItems.map(t => (
                 <button
                   key={t.id}
                   className={`nav-tab ${tab === t.id ? 'active' : ''}`}
@@ -1223,6 +1540,55 @@ export default function App() {
         </div>
       </nav>
 
+      <div className="brand-seg" role="group" aria-label="Välj system">
+        <button
+          type="button"
+          className={`brand-switch-btn ${brand === 'purspot' ? 'active' : ''}`}
+          onClick={() => switchBrand('purspot')}
+        >
+          <span>💚</span> Purspot
+        </button>
+        <button
+          type="button"
+          className={`brand-switch-btn ${brand === 'flo' ? 'active' : ''}`}
+          onClick={() => switchBrand('flo')}
+        >
+          <span>💜</span> Moreflo/Northmill
+        </button>
+      </div>
+
+      {menuOpen && (
+        <>
+          <button className="drawer-backdrop" onClick={() => setMenuOpen(false)} aria-label="Stäng meny" />
+          <nav className="topnav-drawer" aria-label="Huvudmeny" role="dialog" aria-modal="true">
+            <button
+              type="button"
+              className="drawer-close"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Stäng meny"
+            >
+              ✕
+            </button>
+            <div className="drawer-tabs">
+              {navItems.map(t => (
+                <button
+                  key={t.id}
+                  className={`drawer-tab ${tab === t.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setTab(t.id)
+                    setMenuOpen(false)
+                    window.scrollTo({ top: 0 })
+                  }}
+                >
+                  <span className="tab-icon">{t.icon}</span>
+                  <span className="tab-label">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+        </>
+      )}
+
       <main className="content" key={brand + tab}>
         {tab === 'hardware' && (
           <HardwareTab
@@ -1233,8 +1599,8 @@ export default function App() {
             onInfo={setInfoDevice}
           />
         )}
-        {tab === 'paket' && <PackageBuilder />}
-        {tab === 'softpos' && <SoftposTab />}
+        {tab === 'paket' && <PackageBuilder loadFor={pkgLoad} onLoadHandled={() => setPkgLoad(null)} />}
+        {tab === 'kunder' && <CustomerRegistry onOpenInPackageBuilder={openCustomerInBuilder} />}
         {tab === 'backoffice' && <BackofficeTab brand={brand} onZoom={setBoZoom} />}
       </main>
 
