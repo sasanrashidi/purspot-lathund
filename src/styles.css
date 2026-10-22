@@ -2714,7 +2714,7 @@ canvas {
   align-items: start;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 16px 0 40px;
+  padding: 16px 0 64px;
 }
 
 .pkg-main {
@@ -2726,6 +2726,23 @@ canvas {
   top: 120px;
   z-index: 1;
   align-self: start;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 32px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.pkg-side::-webkit-scrollbar {
+  width: 8px;
+}
+.pkg-side::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+.pkg-side::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* ---------- Step headers ---------- */
@@ -3030,8 +3047,24 @@ canvas {
   background: var(--surface);
   padding: 20px;
   box-shadow: 0 4px 24px rgba(0,0,0,.06);
-  max-height: calc(100vh - 140px);
+  /* Kortet begränsas så att steg 5 (Spara paket på kund) alltid
+     hamnar under det i högerpanelen – listan scrollar internt. */
+  max-height: min(46vh, 440px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.pkg-summary::-webkit-scrollbar {
+  width: 8px;
+}
+.pkg-summary::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+.pkg-summary::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .pkg-summary .pkg-step-head {
@@ -3573,6 +3606,14 @@ canvas {
 
   .pkg-side {
     position: static;
+    max-height: none;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .pkg-summary {
+    max-height: none;
+    overflow: visible;
   }
 }
 
