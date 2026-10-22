@@ -1457,7 +1457,7 @@ export default function App() {
   const navItems = [
     { id: 'hardware', icon: '📱', label: 'Hårdvara' },
     ...(brand === 'purspot' ? [{ id: 'paket', icon: '🧩', label: 'Paketbyggare' }] : []),
-    ...(brand === 'purspot' ? [{ id: 'kunder', icon: '👥', label: 'Kunder' }] : []),
+    ...(brand === 'purspot' ? [{ id: 'kunder', icon: '👥', label: 'Kundregister' }] : []),
     { id: 'backoffice', icon: '⚙️', label: 'Backoffice' }
   ]
 
@@ -1589,7 +1589,7 @@ export default function App() {
         </>
       )}
 
-      <main className="content" key={brand + tab}>
+      <main className={'content' + (tab === 'kunder' ? ' content-wide' : '')} key={brand + tab}>
         {tab === 'hardware' && (
           <HardwareTab
             brand={brand}
