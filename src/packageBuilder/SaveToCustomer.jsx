@@ -14,7 +14,11 @@ const EMPTY_FORM = {
   firstName: '',
   lastName: '',
   phone: '',
-  email: ''
+  email: '',
+  orgNumber: '',
+  avtalStart: '',
+  deliveryAddress: '',
+  invoiceAddress: ''
 }
 
 export default function SaveToCustomer({
@@ -207,6 +211,52 @@ export default function SaveToCustomer({
                       autoComplete="email"
                     />
                   </div>
+                </div>
+                <div className="form-grid-2">
+                  <div className="form-group">
+                    <label htmlFor="sc-org">Organisationsnummer</label>
+                    <input
+                      id="sc-org"
+                      type="text"
+                      placeholder="55XXXXXX-XXXX"
+                      value={form.orgNumber}
+                      onChange={(e) => setForm({ ...form, orgNumber: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="sc-avtalstart">Avtalsstart</label>
+                    <input
+                      id="sc-avtalstart"
+                      type="date"
+                      value={(form.avtalStart || '').slice(0, 10)}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          avtalStart: e.target.value ? new Date(e.target.value).toISOString() : ''
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="sc-delivery">Leveransadress</label>
+                  <input
+                    id="sc-delivery"
+                    type="text"
+                    placeholder="Gatan 1, 123 45 Staden"
+                    value={form.deliveryAddress}
+                    onChange={(e) => setForm({ ...form, deliveryAddress: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="sc-invoice">Fakturaadress</label>
+                  <input
+                    id="sc-invoice"
+                    type="text"
+                    placeholder="Gatan 1, 123 45 Staden (lämna tomt för samma som leverans)"
+                    value={form.invoiceAddress}
+                    onChange={(e) => setForm({ ...form, invoiceAddress: e.target.value })}
+                  />
                 </div>
                 <div className="modal-actions">
                   <button type="button" className="btn-ghost" onClick={() => setShowNew(false)}>
