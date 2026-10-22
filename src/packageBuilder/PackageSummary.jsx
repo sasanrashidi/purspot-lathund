@@ -35,22 +35,20 @@ export default function PackageSummary({ groups = [], onRemove, businessType }) 
       <header className="pkg-step-head">
         <span className="pkg-step-badge">4</span>
         <div>
-          <h3 className="pkg-step-title">Paketöversikt</h3>
+          <div className="pkg-summary-head-row">
+            <h3 className="pkg-step-title">Paketöversikt</h3>
+            {biz && (
+              <span className="pkg-biz-pill" title={`Verksamhetstyp: ${biz.label}`}>
+                <span aria-hidden="true">{biz.icon}</span>
+                {biz.label}
+              </span>
+            )}
+          </div>
           <p className="pkg-step-desc">
             {total} enheter · {groups.length} grupper
           </p>
         </div>
       </header>
-
-      {biz && (
-        <div className="pkg-summary-biz">
-          <span className="pkg-summary-biz-icon" aria-hidden="true">{biz.icon}</span>
-          <div className="pkg-summary-biz-text">
-            <span className="pkg-summary-biz-label">Verksamhetstyp</span>
-            <strong className="pkg-summary-biz-name">{biz.label}</strong>
-          </div>
-        </div>
-      )}
 
       {groups.length === 0 ? (
         <p className="pkg-summary-empty">Inga enheter valda ännu.</p>
