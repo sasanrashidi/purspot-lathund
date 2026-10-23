@@ -3196,6 +3196,242 @@ canvas {
   color: var(--green-700);
 }
 
+/* =============================================================
+   Rabatt – delad UI (rad-rabatt + totalrabatt) för
+   Paketbyggaren och Kundregistrets detaljvy
+   ============================================================= */
+.disc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.disc-btn:hover {
+  background: var(--mint-50, #ecfdf5);
+  border-color: rgba(5, 150, 105, 0.45);
+  color: #047857;
+}
+.disc-btn.is-active {
+  background: #047857;
+  border-color: #047857;
+  color: #ffffff;
+}
+
+.disc-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #d1fae5;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #047857;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.disc-old {
+  color: #94a3b8;
+  font-weight: 600;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.pkg-summary-price.has-discount,
+.cust-prod-price.has-discount {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.pkg-summary-price.has-discount s,
+.cust-prod-price.has-discount s {
+  color: #94a3b8;
+  font-weight: 500;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+.pkg-summary-price.has-discount strong,
+.cust-prod-price.has-discount strong {
+  color: #047857;
+  font-weight: 800;
+}
+
+.disc-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  margin-top: 7px;
+  padding: 8px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+}
+.disc-input {
+  width: 74px;
+  padding: 5px 8px;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+}
+.disc-input:focus {
+  border-color: rgba(5, 150, 105, 0.55);
+}
+.disc-types {
+  display: inline-flex;
+  gap: 4px;
+}
+.disc-type {
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #64748b;
+  border-radius: 999px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.disc-type.is-active {
+  background: #047857;
+  border-color: #047857;
+  color: #fff;
+}
+.disc-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  border-radius: 50%;
+  border: none;
+  background: #047857;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.disc-save:hover {
+  background: #065f46;
+}
+.disc-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #64748b;
+  font-size: 12px;
+  cursor: pointer;
+}
+.disc-cancel:hover {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.disc-remove {
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  color: #b91c1c;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.disc-remove:hover {
+  background: #fef2f2;
+}
+
+.disc-add-link {
+  display: block;
+  width: 100%;
+  padding: 5px 0;
+  border: none;
+  background: none;
+  color: #047857;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.disc-add-link:hover {
+  text-decoration: underline;
+}
+
+.disc-edit-link {
+  margin-left: 7px;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #475569;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.disc-edit-link:hover {
+  border-color: rgba(5, 150, 105, 0.5);
+  color: #047857;
+}
+.disc-edit-link.is-clear {
+  color: #b91c1c;
+}
+.disc-edit-link.is-clear:hover {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.pkg-summary-total.is-discount .pkg-summary-total-value,
+.cust-summary-row.is-discount strong {
+  color: #b91c1c;
+}
+.pkg-summary-total.is-final .pkg-summary-total-value {
+  font-size: 17px;
+}
+
+.cust-prod-card {
+  flex-wrap: wrap;
+}
+.cust-prod-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cust-prod-card > .disc-editor {
+  flex: 1 1 100%;
+}
+.cust-summary-final {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.cust-summary-final .disc-old {
+  font-size: 12.5px;
+}
+
 /* Köpform (Direktköp / 48 mån) i enhetsväljaren */
 .pkg-contract-row {
   display: grid;
@@ -4684,7 +4920,7 @@ canvas {
 
 /* ---------- Modal: skapa/redigera kund ---------- */
 .cust-modal {
-  max-width: 540px;
+  max-width: 680px;
   width: 100%;
   border-radius: 16px;
   box-shadow: 0 25px 50px -12px rgba(16, 24, 40, 0.25);
@@ -4731,11 +4967,50 @@ canvas {
   gap: 7px;
   min-width: 0;
 }
-.form-group label {
-  font-size: 12.5px;
+.form-group label .req {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+.cust-serials-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 13px;
   font-weight: 600;
-  color: #4b5563;
-  letter-spacing: 0.01em;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.cust-serials-toggle:hover {
+  background: #f1f5f9;
+  border-color: #d1d5db;
+}
+.cust-serials-toggle.is-open {
+  color: #047857;
+  background: var(--mint-50);
+  border-color: rgba(5, 150, 105, 0.35);
+}
+
+.cust-serials-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.form-group input.is-invalid,
+.form-group select.is-invalid {
+  border-color: #fca5a5;
+}
+.form-error {
+  font-size: 11.5px;
+  color: #dc2626;
 }
 .form-group input,
 .form-group select {

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { subscribeToCustomers, addCustomer, updateCustomer, deleteCustomer, customerFullName } from './customers'
+import { subscribeToCustomers, addCustomer, updateCustomer, deleteCustomer, customerFullName, formatOrgNumber } from './customers'
 import { devices as deviceCatalog, formatSEK } from './data'
 import { resolveRules, MODE_LABELS } from './packageBuilder/rules'
 import { groupSelection } from './packageBuilder/logic'
+import { normalizeDiscounts, discountAmount, discountLabel, summarizeRows } from './packageBuilder/discounts'
+import DiscountEditor, { DiscountButton } from './components/DiscountEditor'
 
 const rules = resolveRules('purspot')
 
@@ -42,10 +44,23 @@ function contractLabel(contract) {
 }
 
 // Bryt ned ett paket: hårdvara (kassor/express/terminaler) respektive
-// tillbehör & mjukvara – samt engångsköp.
+// tillbehör & mjukvara – samt engångsköp och rabatter.
+// `summary` är den rabattberäknade summeringen (ordinarie, rad- och
+// totalrabatt, slutpris) – samma logik som Paketbyggaren använder.
 function calculateBreakdown(packageData) {
-  const res = { hwMonthly: 0, swMonthly: 0, buy: 0, groups: [], hasMonthly: false }
-  if (!packageData || !packageData.selected || !Object.keys(packageData.selected).length) return res
+  const res = {
+    hwMonthly: 0,
+    swMonthly: 0,
+    buy: 0,
+    groups: [],
+    hasMonthly: false,
+    rows: [],
+    discounts: normalizeDiscounts(packageData?.discounts)
+  }
+  if (!packageData || !packageData.selected || !Object.keys(packageData.selected).length) {
+    res.summary = summarizeRows([], null)
+    return res
+  }
   const groups = groupSelection(rules, packageData.selected)
   for (const g of groups) {
     const isHardware = g.role === 'main' || g.role === 'express' || g.role === 'terminal'
@@ -53,12 +68,15 @@ function calculateBreakdown(packageData) {
       const meta = getDeviceMeta(it.id)
       const qty = packageData.quantities?.[it.id] || 1
       const contract = packageData.contracts?.[it.id] || (meta.monthly48 ? '48' : 'buy')
+      const regular =
+        contract === 'buy' ? (meta.buyPrice || 0) * qty : (meta.monthly48 || 0) * qty
+      res.rows.push({ contract, regular, discount: res.discounts.items[it.id] || null })
       if (contract === 'buy') {
-        res.buy += (meta.buyPrice || 0) * qty
+        res.buy += regular
       } else {
         res.hasMonthly = true
-        if (isHardware) res.hwMonthly += (meta.monthly48 || 0) * qty
-        else res.swMonthly += (meta.monthly48 || 0) * qty
+        if (isHardware) res.hwMonthly += regular
+        else res.swMonthly += regular
       }
     }
   }
@@ -66,12 +84,13 @@ function calculateBreakdown(packageData) {
     ...g,
     title: g.role === 'accessory' ? 'Tillbehör & Mjukvara' : g.title
   }))
+  res.summary = summarizeRows(res.rows, res.discounts.total)
   return res
 }
 
 function calculateTotals(packageData) {
   const bd = calculateBreakdown(packageData)
-  return { buy: bd.buy, monthly: bd.hwMonthly + bd.swMonthly }
+  return { buy: bd.summary.finalBuy, monthly: bd.summary.finalMonthly }
 }
 
 function formatTotalsStr(totals) {
@@ -88,8 +107,9 @@ function formatTotalsStr(totals) {
 // -------------------------------------------------------------
 function exportCustomerPdf(customer) {
   const bd = calculateBreakdown(customer.packageData)
+  const s = bd.summary
   const name = customer.company || customerFullName(customer) || 'Kund'
-  const totalMonthly = bd.hwMonthly + bd.swMonthly
+  const totalMonthly = s.finalMonthly
   const packageHtml = bd.groups.length
     ? bd.groups
         .map(
@@ -102,10 +122,17 @@ function exportCustomerPdf(customer) {
                 const meta = getDeviceMeta(it.id)
                 const qty = customer.packageData?.quantities?.[it.id] || 1
                 const contract = customer.packageData?.contracts?.[it.id] || (meta.monthly48 ? '48' : 'buy')
-                const price =
-                  contract === 'buy'
-                    ? formatSEK((meta.buyPrice || 0) * qty)
-                    : `${formatSEK((meta.monthly48 || 0) * qty)}/mån`
+                const regular =
+                  contract === 'buy' ? (meta.buyPrice || 0) * qty : (meta.monthly48 || 0) * qty
+                const suffix = contract === 'buy' ? '' : '/mån'
+                const d = bd.discounts.items[it.id] || null
+                const amount = discountAmount(regular, d)
+                let price
+                if (d && amount > 0) {
+                  price = `<s>${formatSEK(regular)}${suffix}</s> ${formatSEK(regular - amount)}${suffix} (${discountLabel(d)})`
+                } else {
+                  price = `${formatSEK(regular)}${suffix}`
+                }
                 return `<tr><td>${qty}× ${meta.model || meta.id}</td><td class="muted">${contractLabel(contract)}</td><td class="num">${price}</td></tr>`
               })
               .join('')}
@@ -139,7 +166,9 @@ function exportCustomerPdf(customer) {
   <div class="summary">
     <div class="row"><span>Hårdvara /mån</span><span class="num">${formatSEK(bd.hwMonthly)}/mån</span></div>
     <div class="row"><span>Mjukvara & tillbehör /mån</span><span class="num">${formatSEK(bd.swMonthly)}/mån</span></div>
-    ${bd.buy > 0 ? `<div class="row"><span>Engångsköp</span><span class="num">${formatSEK(bd.buy)}</span></div>` : ''}
+    ${s.rowDiscountMonthly > 0 ? `<div class="row"><span>Radrabatter</span><span class="num">−${formatSEK(s.rowDiscountMonthly)}/mån</span></div>` : ''}
+    ${s.totalDiscountMonthly > 0 ? `<div class="row"><span>Totalrabatt</span><span class="num">−${formatSEK(s.totalDiscountMonthly)}/mån</span></div>` : ''}
+    ${s.regularBuy > 0 ? `<div class="row"><span>Engångsköp${s.finalBuy < s.regularBuy ? ` (<s>${formatSEK(s.regularBuy)}</s>)` : ''}</span><span class="num">${formatSEK(s.finalBuy)}</span></div>` : ''}
     <div class="row total"><span>Totalt avtalsvärde /mån</span><span class="num">${formatSEK(totalMonthly)}/mån</span></div>
   </div>
   <footer>Genererad ${new Date().toLocaleDateString('sv-SE')} · Purspot Kundregister</footer>
@@ -294,7 +323,7 @@ export default function CustomerRegistry({ onOpenInPackageBuilder }) {
     let drafts = 0
     for (const c of customers) {
       const bd = calculateBreakdown(c.packageData)
-      mrr += bd.hwMonthly + bd.swMonthly
+      mrr += bd.summary.finalMonthly
       const status = (c.status || 'Utkast').toLowerCase()
       if (status === 'utkast') drafts += 1
       else if (status !== 'arkiverad') active += 1
@@ -329,17 +358,62 @@ export default function CustomerRegistry({ onOpenInPackageBuilder }) {
     setShowModal(true)
   }
 
+  const [serialsOpen, setSerialsOpen] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  const requiredFields = [
+    'company',
+    'firstName',
+    'lastName',
+    'phone',
+    'email',
+    'orgNumber',
+    'avtalStart',
+    'deliveryAddress',
+    'invoiceAddress'
+  ]
+
+  const validate = (data) => {
+    const errs = {}
+    for (const f of requiredFields) {
+      if (!String(data?.[f] || '').trim()) errs[f] = 'Obligatoriskt fält'
+    }
+    return errs
+  }
+
   const handleSave = (e) => {
     e.preventDefault()
-    if (editingCustomer?.id) {
-      const updated = updateCustomer(editingCustomer.id, editingCustomer)
+    const base = editingCustomer || {}
+    const payload = { ...base, orgNumber: formatOrgNumber(base?.orgNumber) }
+    const errs = validate(payload)
+    if (Object.keys(errs).length) {
+      setErrors(errs)
+      return
+    }
+    setErrors({})
+    if (payload.id) {
+      const updated = updateCustomer(payload.id, payload)
       if (updated) setSelectedCustomer(updated)
     } else {
-      const created = addCustomer(editingCustomer)
+      const created = addCustomer(payload)
       setSelectedCustomer(created)
     }
     setShowModal(false)
     setEditingCustomer(null)
+  }
+
+  const openNew = () => {
+    setEditingCustomer({ ...EMPTY_CUSTOMER })
+    setErrors({})
+    setSerialsOpen(false)
+    setShowModal(true)
+  }
+
+  const openEdit = (customer) => {
+    setEditingCustomer({ ...customer })
+    setErrors({})
+    setSerialsOpen(Boolean(customer.packageData?.serials && Object.keys(customer.packageData.serials).length))
+    setShowModal(true)
   }
 
   const handleDelete = (id) => {
@@ -413,7 +487,7 @@ export default function CustomerRegistry({ onOpenInPackageBuilder }) {
             aria-label="Sök kund"
           />
         </div>
-        <button type="button" className="btn-primary customer-create-btn" onClick={handleCreateNew}>
+        <button type="button" className="btn-primary customer-create-btn" onClick={openNew}>
           <svg
             className="customer-create-icon"
             viewBox="0 0 24 24"
@@ -460,7 +534,7 @@ export default function CustomerRegistry({ onOpenInPackageBuilder }) {
                 ? 'Skapa din första kund för att komma igång.'
                 : 'Prova att justera din sökning eller skapa en ny kund.'}
             </p>
-            <button type="button" className="btn-primary" onClick={handleCreateNew}>
+            <button type="button" className="btn-primary" onClick={openNew}>
               + Skapa ny kund
             </button>
           </div>
@@ -516,9 +590,16 @@ export default function CustomerRegistry({ onOpenInPackageBuilder }) {
                       >
                         Visa
                       </button>
-                      <button type="button" className="btn-secondary cust-btn-sm" onClick={() => handleEdit(customer)}>
-                        Redigera
-                      </button>
+          <button
+            type="button"
+            className="btn-secondary cust-btn-sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              openEdit(customer)
+            }}
+          >
+            Redigera
+          </button>
                       <button type="button" className="btn-danger cust-btn-sm" onClick={() => handleDelete(customer.id)}>
                         Ta bort
                       </button>
@@ -536,157 +617,250 @@ export default function CustomerRegistry({ onOpenInPackageBuilder }) {
           customer={selectedCustomer}
           onClose={() => setSelectedCustomer(null)}
           onOpenInPackageBuilder={onOpenInPackageBuilder}
-          onEdit={handleEdit}
+          onEdit={openEdit}
           onDelete={handleDelete}
+          onPackageDataChange={(pd) => {
+            const updated = updateCustomer(selectedCustomer.id, { packageData: pd })
+            if (updated) setSelectedCustomer(updated)
+          }}
         />
       )}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-panel cust-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <button type="button" className="modal-close" onClick={() => setShowModal(false)} aria-label="Stäng">✕</button>
+            <button type="button" className="modal-close" onClick={() => { setShowModal(false); setEditingCustomer(null) }} aria-label="Stäng">✕</button>
             <div className="cust-modal-body">
               <h2 className="modal-title">{editingCustomer?.id ? 'Redigera kund' : 'Skapa ny kund'}</h2>
               <form className="cust-form" onSubmit={handleSave}>
                 <div className="form-group">
-                  <label htmlFor="cust-company">Företag</label>
+                  <label htmlFor="cust-company">
+                    Företag <span className="req">*</span>
+                  </label>
                   <input
                     id="cust-company"
                     type="text"
+                    required
+                    className={errors.company ? 'is-invalid' : ''}
                     placeholder="Företagsnamn"
                     value={editingCustomer?.company || ''}
-                    onChange={(e) => setEditingCustomer({ ...editingCustomer, company: e.target.value })}
+                    onChange={(e) => {
+                      setEditingCustomer({ ...editingCustomer, company: e.target.value })
+                      if (errors.company) setErrors({ ...errors, company: '' })
+                    }}
                   />
+                  {errors.company && <span className="form-error">{errors.company}</span>}
                 </div>
                 <div className="form-grid-2">
                   <div className="form-group">
-                    <label htmlFor="cust-firstname">Förnamn</label>
+                    <label htmlFor="cust-firstname">
+                      Förnamn <span className="req">*</span>
+                    </label>
                     <input
                       id="cust-firstname"
                       type="text"
                       autoComplete="given-name"
+                      required
+                      className={errors.firstName ? 'is-invalid' : ''}
                       placeholder="Förnamn"
                       value={editingCustomer?.firstName || ''}
-                      onChange={(e) => setEditingCustomer({ ...editingCustomer, firstName: e.target.value })}
+                      onChange={(e) => {
+                        setEditingCustomer({ ...editingCustomer, firstName: e.target.value })
+                        if (errors.firstName) setErrors({ ...errors, firstName: '' })
+                      }}
                     />
+                    {errors.firstName && <span className="form-error">{errors.firstName}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="cust-lastname">Efternamn</label>
+                    <label htmlFor="cust-lastname">
+                      Efternamn <span className="req">*</span>
+                    </label>
                     <input
                       id="cust-lastname"
                       type="text"
                       autoComplete="family-name"
+                      required
+                      className={errors.lastName ? 'is-invalid' : ''}
                       placeholder="Efternamn"
                       value={editingCustomer?.lastName || ''}
-                      onChange={(e) => setEditingCustomer({ ...editingCustomer, lastName: e.target.value })}
+                      onChange={(e) => {
+                        setEditingCustomer({ ...editingCustomer, lastName: e.target.value })
+                        if (errors.lastName) setErrors({ ...errors, lastName: '' })
+                      }}
                     />
+                    {errors.lastName && <span className="form-error">{errors.lastName}</span>}
                   </div>
                 </div>
                 <div className="form-grid-2">
                   <div className="form-group">
-                    <label htmlFor="cust-phone">Telefon</label>
+                    <label htmlFor="cust-phone">
+                      Telefon <span className="req">*</span>
+                    </label>
                     <input
                       id="cust-phone"
                       type="tel"
                       autoComplete="tel"
+                      required
+                      className={errors.phone ? 'is-invalid' : ''}
                       placeholder="07X XXX XX XX"
                       value={editingCustomer?.phone || ''}
-                      onChange={(e) => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+                      onChange={(e) => {
+                        setEditingCustomer({ ...editingCustomer, phone: e.target.value })
+                        if (errors.phone) setErrors({ ...errors, phone: '' })
+                      }}
                     />
+                    {errors.phone && <span className="form-error">{errors.phone}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="cust-email">E-post</label>
+                    <label htmlFor="cust-email">
+                      E-post <span className="req">*</span>
+                    </label>
                     <input
                       id="cust-email"
                       type="email"
                       autoComplete="email"
+                      required
+                      className={errors.email ? 'is-invalid' : ''}
                       placeholder="namn@foretag.se"
                       value={editingCustomer?.email || ''}
-                      onChange={(e) => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
+                      onChange={(e) => {
+                        setEditingCustomer({ ...editingCustomer, email: e.target.value })
+                        if (errors.email) setErrors({ ...errors, email: '' })
+                      }}
                     />
+                    {errors.email && <span className="form-error">{errors.email}</span>}
                   </div>
                 </div>
                 <div className="form-grid-2">
                   <div className="form-group">
-                    <label htmlFor="cust-org">Organisationsnummer</label>
+                    <label htmlFor="cust-org">
+                      Organisationsnummer <span className="req">*</span>
+                    </label>
                     <input
                       id="cust-org"
                       type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      required
+                      className={errors.orgNumber ? 'is-invalid' : ''}
                       placeholder="55XXXXXX-XXXX"
+                      maxLength={11}
                       value={editingCustomer?.orgNumber || ''}
-                      onChange={(e) => setEditingCustomer({ ...editingCustomer, orgNumber: e.target.value })}
+                      onChange={(e) => {
+                        setEditingCustomer({
+                          ...editingCustomer,
+                          orgNumber: formatOrgNumber(e.target.value, editingCustomer?.orgNumber || '')
+                        })
+                        if (errors.orgNumber) setErrors({ ...errors, orgNumber: '' })
+                      }}
                     />
+                    {errors.orgNumber && <span className="form-error">{errors.orgNumber}</span>}
                   </div>
                   <div className="form-group">
-                    <label htmlFor="cust-avtalstart">Avtalsstart</label>
+                    <label htmlFor="cust-avtalstart">
+                      Avtalsstart <span className="req">*</span>
+                    </label>
                     <input
                       id="cust-avtalstart"
                       type="date"
+                      required
+                      className={errors.avtalStart ? 'is-invalid' : ''}
                       value={(editingCustomer?.avtalStart || '').slice(0, 10)}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setEditingCustomer({
                           ...editingCustomer,
                           avtalStart: e.target.value ? new Date(e.target.value).toISOString() : ''
                         })
-                      }
+                        if (errors.avtalStart) setErrors({ ...errors, avtalStart: '' })
+                      }}
                     />
+                    {errors.avtalStart && <span className="form-error">{errors.avtalStart}</span>}
                   </div>
                 </div>
-                <div className="form-group">
-                  <label htmlFor="cust-delivery">Leveransadress</label>
-                  <input
-                    id="cust-delivery"
-                    type="text"
-                    placeholder="Gatan 1, 123 45 Staden"
-                    value={editingCustomer?.deliveryAddress || ''}
-                    onChange={(e) => setEditingCustomer({ ...editingCustomer, deliveryAddress: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="cust-invoice">Fakturaadress</label>
-                  <input
-                    id="cust-invoice"
-                    type="text"
-                    placeholder="Gatan 1, 123 45 Staden (lämna tomt för samma som leverans)"
-                    value={editingCustomer?.invoiceAddress || ''}
-                    onChange={(e) => setEditingCustomer({ ...editingCustomer, invoiceAddress: e.target.value })}
-                  />
+                <div className="form-grid-2">
+                  <div className="form-group">
+                    <label htmlFor="cust-delivery">
+                      Leveransadress <span className="req">*</span>
+                    </label>
+                    <input
+                      id="cust-delivery"
+                      type="text"
+                      required
+                      className={errors.deliveryAddress ? 'is-invalid' : ''}
+                      placeholder="Gatan 1, 123 45 Staden"
+                      value={editingCustomer?.deliveryAddress || ''}
+                      onChange={(e) => {
+                        setEditingCustomer({ ...editingCustomer, deliveryAddress: e.target.value })
+                        if (errors.deliveryAddress) setErrors({ ...errors, deliveryAddress: '' })
+                      }}
+                    />
+                    {errors.deliveryAddress && <span className="form-error">{errors.deliveryAddress}</span>}
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="cust-invoice">
+                      Fakturaadress <span className="req">*</span>
+                    </label>
+                    <input
+                      id="cust-invoice"
+                      type="text"
+                      required
+                      className={errors.invoiceAddress ? 'is-invalid' : ''}
+                      placeholder="Gatan 1, 123 45 Staden"
+                      value={editingCustomer?.invoiceAddress || ''}
+                      onChange={(e) => {
+                        setEditingCustomer({ ...editingCustomer, invoiceAddress: e.target.value })
+                        if (errors.invoiceAddress) setErrors({ ...errors, invoiceAddress: '' })
+                      }}
+                    />
+                    {errors.invoiceAddress && <span className="form-error">{errors.invoiceAddress}</span>}
+                  </div>
                 </div>
 
                 {editingCustomer?.id &&
                   editingCustomer.packageData?.selected &&
                   Object.keys(editingCustomer.packageData.selected).length > 0 && (
-                    <div className="cust-serials">
-                      <span className="cust-serials-label">Serienummer / Enhets-ID</span>
-                      {groupSelection(rules, editingCustomer.packageData.selected).flatMap((g) =>
-                        g.items.map((it) => {
-                          const meta = getDeviceMeta(it.id)
-                          return (
-                            <div className="form-group" key={it.id}>
-                              <label htmlFor={`serial-${it.id}`}>{meta.model || meta.id}</label>
-                              <input
-                                id={`serial-${it.id}`}
-                                type="text"
-                                placeholder="Serienummer / Enhets-ID"
-                                value={editingCustomer.packageData.serials?.[it.id] || ''}
-                                onChange={(e) =>
-                                  setEditingCustomer({
-                                    ...editingCustomer,
-                                    packageData: {
-                                      ...editingCustomer.packageData,
-                                      serials: {
-                                        ...(editingCustomer.packageData.serials || {}),
-                                        [it.id]: e.target.value
-                                      }
+                    <>
+                      <button
+                        type="button"
+                        className={`cust-serials-toggle${serialsOpen ? ' is-open' : ''}`}
+                        onClick={() => setSerialsOpen((v) => !v)}
+                        aria-expanded={serialsOpen}
+                      >
+                        {serialsOpen ? '−' : '+'} {serialsOpen ? 'Dölj serienummer för enheter' : 'Lägg till serienummer för enheter (Valfritt)'}
+                      </button>
+                      {serialsOpen && (
+                        <div className="cust-serials-body">
+                          {groupSelection(rules, editingCustomer.packageData.selected).flatMap((g) =>
+                            g.items.map((it) => {
+                              const meta = getDeviceMeta(it.id)
+                              return (
+                                <div className="form-group" key={it.id}>
+                                  <label htmlFor={`serial-${it.id}`}>{meta.model || meta.id}</label>
+                                  <input
+                                    id={`serial-${it.id}`}
+                                    type="text"
+                                    placeholder="Serienummer / Enhets-ID"
+                                    value={editingCustomer.packageData.serials?.[it.id] || ''}
+                                    onChange={(e) =>
+                                      setEditingCustomer({
+                                        ...editingCustomer,
+                                        packageData: {
+                                          ...editingCustomer.packageData,
+                                          serials: {
+                                            ...(editingCustomer.packageData.serials || {}),
+                                            [it.id]: e.target.value
+                                          }
+                                        }
+                                      })
                                     }
-                                  })
-                                }
-                              />
-                            </div>
-                          )
-                        })
+                                  />
+                                </div>
+                              )
+                            })
+                          )}
+                        </div>
                       )}
-                    </div>
+                    </>
                   )}
 
                 <div className="modal-actions">
@@ -709,7 +883,10 @@ export default function CustomerRegistry({ onOpenInPackageBuilder }) {
 // -------------------------------------------------------------
 // Slide-over drawer med kundens detaljer
 // -------------------------------------------------------------
-function CustomerDrawer({ customer, onClose, onOpenInPackageBuilder, onEdit, onDelete }) {
+function CustomerDrawer({ customer, onClose, onOpenInPackageBuilder, onEdit, onDelete, onPackageDataChange }) {
+  const [editingDisc, setEditingDisc] = useState(null)
+  const [editingTotal, setEditingTotal] = useState(false)
+
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     const onKey = (e) => {
@@ -723,10 +900,31 @@ function CustomerDrawer({ customer, onClose, onOpenInPackageBuilder, onEdit, onD
   }, [onClose])
 
   const bd = calculateBreakdown(customer.packageData)
-  const totalMonthly = bd.hwMonthly + bd.swMonthly
+  const s = bd.summary
+  const discountsTotal = bd.discounts.total
+  const totalMonthly = s.finalMonthly
   const startIso = customer.avtalStart || customer.createdAt
   const endIso = bd.hasMonthly ? addMonths(startIso, 48) : null
   const fullName = customerFullName(customer)
+
+  // Spara rad-rabatt direkt på kundens packageData.
+  function saveItemDiscount(deviceId, disc) {
+    const pd = customer.packageData || {}
+    const d = normalizeDiscounts(pd.discounts)
+    const items = { ...d.items }
+    if (disc) items[deviceId] = disc
+    else delete items[deviceId]
+    if (onPackageDataChange) onPackageDataChange({ ...pd, discounts: { items, total: d.total } })
+    setEditingDisc(null)
+  }
+
+  // Spara totalrabatt direkt på kundens packageData.
+  function saveTotalDiscount(disc) {
+    const pd = customer.packageData || {}
+    const d = normalizeDiscounts(pd.discounts)
+    if (onPackageDataChange) onPackageDataChange({ ...pd, discounts: { items: d.items, total: disc } })
+    setEditingTotal(false)
+  }
 
   return (
     <div className="cust-drawer-backdrop" onClick={onClose}>
@@ -814,10 +1012,16 @@ function CustomerDrawer({ customer, onClose, onOpenInPackageBuilder, onEdit, onD
                     const contract = customer.packageData?.contracts?.[it.id] || (meta.monthly48 ? '48' : 'buy')
                     const mode = group.role === 'terminal' ? MODE_LABELS[it.mode] : null
                     const serial = customer.packageData?.serials?.[it.id]
-                    const price =
-                      contract === 'buy'
-                        ? formatSEK((meta.buyPrice || 0) * qty)
-                        : `${formatSEK((meta.monthly48 || 0) * qty)}/mån`
+                    const isBuy = contract === 'buy'
+                    const suffix = isBuy ? '' : '/mån'
+                    const regular = isBuy
+                      ? (meta.buyPrice || 0) * qty
+                      : (meta.monthly48 || 0) * qty
+                    const price = `${formatSEK(regular)}${suffix}`
+                    const d = bd.discounts.items[it.id] || null
+                    const amount = discountAmount(regular, d)
+                    const finalPrice = `${formatSEK(regular - amount)}${suffix}`
+                    const editing = editingDisc === it.id
                     return (
                       <div key={it.id} className="cust-prod-card">
                         <div className="cust-prod-main">
@@ -829,7 +1033,35 @@ function CustomerDrawer({ customer, onClose, onOpenInPackageBuilder, onEdit, onD
                           </div>
                           {serial && <div className="cust-prod-serial">S/N: {serial}</div>}
                         </div>
-                        <div className={`cust-prod-price ${contract === 'buy' ? 'is-buy' : ''}`}>{price}</div>
+                        <div className="cust-prod-side">
+                          <div
+                            className={`cust-prod-price ${isBuy ? 'is-buy' : ''}${d ? ' has-discount' : ''}`}
+                          >
+                            {d ? (
+                              <>
+                                <s>{price}</s>
+                                <strong>{finalPrice}</strong>
+                                <span className="disc-tag">{discountLabel(d)}</span>
+                              </>
+                            ) : (
+                              price
+                            )}
+                          </div>
+                          <DiscountButton
+                            active={editing}
+                            onClick={() => setEditingDisc(editing ? null : it.id)}
+                            title={`Rabatt på ${meta.model || it.id}`}
+                          />
+                        </div>
+                        {editing && (
+                          <DiscountEditor
+                            initial={d}
+                            unit={isBuy ? 'kr' : 'kr/mån'}
+                            onSave={(disc) => saveItemDiscount(it.id, disc)}
+                            onCancel={() => setEditingDisc(null)}
+                            onClear={() => saveItemDiscount(it.id, null)}
+                          />
+                        )}
                       </div>
                     )
                   })}
@@ -847,15 +1079,77 @@ function CustomerDrawer({ customer, onClose, onOpenInPackageBuilder, onEdit, onD
                   <span>Totalt Mjukvara & Tillbehör</span>
                   <strong>{formatSEK(bd.swMonthly)}/mån</strong>
                 </div>
-                {bd.buy > 0 && (
+                {s.rowDiscountMonthly > 0 && (
+                  <div className="cust-summary-row is-discount">
+                    <span>Radrabatter</span>
+                    <strong>−{formatSEK(s.rowDiscountMonthly)}/mån</strong>
+                  </div>
+                )}
+
+                {discountsTotal && !editingTotal ? (
+                  <div className="cust-summary-row is-discount">
+                    <span>
+                      Totalrabatt
+                      <button
+                        type="button"
+                        className="disc-edit-link"
+                        onClick={() => setEditingTotal(true)}
+                        aria-label="Ändra totalrabatt"
+                      >
+                        Ändra
+                      </button>
+                      <button
+                        type="button"
+                        className="disc-edit-link is-clear"
+                        onClick={() => saveTotalDiscount(null)}
+                      >
+                        Ta bort
+                      </button>
+                    </span>
+                    <strong>
+                      −
+                      {formatSEK(
+                        s.totalDiscountMonthly > 0 ? s.totalDiscountMonthly : s.totalDiscountBuy
+                      )}
+                      {s.totalDiscountMonthly > 0 ? '/mån' : ''}
+                    </strong>
+                  </div>
+                ) : (
+                  !editingTotal && (
+                    <button type="button" className="disc-add-link" onClick={() => setEditingTotal(true)}>
+                      + Lägg till totalrabatt
+                    </button>
+                  )
+                )}
+                {editingTotal && (
+                  <DiscountEditor
+                    initial={discountsTotal}
+                    unit="kr/mån"
+                    onSave={saveTotalDiscount}
+                    onCancel={() => setEditingTotal(false)}
+                    onClear={() => saveTotalDiscount(null)}
+                  />
+                )}
+
+                {s.regularBuy > 0 && (
                   <div className="cust-summary-row">
                     <span>Engångsköp</span>
-                    <strong>{formatSEK(bd.buy)}</strong>
+                    <strong>
+                      {s.finalBuy < s.regularBuy && (
+                        <s className="disc-old">{formatSEK(s.regularBuy)}</s>
+                      )}
+                      {formatSEK(s.finalBuy)}
+                    </strong>
                   </div>
                 )}
                 <div className="cust-summary-row is-total">
                   <span>Totalt avtalsvärde</span>
-                  <strong>{formatSEK(totalMonthly)}/mån</strong>
+                  <strong className="cust-summary-final">
+                    {s.finalMonthly < s.regularMonthly && (
+                      <s className="disc-old">{formatSEK(s.regularMonthly)}/mån</s>
+                    )}
+                    {formatSEK(totalMonthly)}/mån
+                  </strong>
                 </div>
               </div>
             )}

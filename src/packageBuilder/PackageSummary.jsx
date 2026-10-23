@@ -1,27 +1,25 @@
-import React from 'react'
+import React, { useState } from 'react'
+import DiscountEditor, { DiscountButton } from '../components/DiscountEditor'
+import { discountAmount, discountLabel, summarizeRows } from './discounts'
 
 // =============================================================
 // Steg 4 – Paketöversikt (sammanställning + totalkalkyl).
-// Ren presentationskomponent: tar emot färdigberäknade `groups`
-// från containern (via logic.groupSelection) och ritar dem med
-// köpform och pris per enhet.
-// Ingen logik importeras här – allt kommer färdiggrupperat.
+// Tar emot färdigberäknade `groups` från containern och ritar
+// dem med köpform, pris och rabatt per enhet, samt totalrabatt
+// och omräknad slutsumma i botten.
 // =============================================================
-export default function PackageSummary({ groups = [], onRemove, businessType }) {
+export default function PackageSummary({
+  groups = [],
+  onRemove,
+  businessType,
+  discounts = { items: {}, total: null },
+  onItemDiscount,
+  onTotalDiscount
+}) {
   const total = groups.reduce((sum, g) => sum + g.items.reduce((n, it) => n + (it.qty || 1), 0), 0)
   const biz = businessType?.label ? businessType : null
-
-  const totals = groups.reduce(
-    (acc, g) => {
-      for (const it of g.items) {
-        const qty = it.qty || 1
-        if (it.contract === 'buy') acc.buy += (it.buyPrice || 0) * qty
-        else acc.monthly += (it.monthly48 || 0) * qty
-      }
-      return acc
-    },
-    { buy: 0, monthly: 0 }
-  )
+  const [editingId, setEditingId] = useState(null)
+  const [editingTotal, setEditingTotal] = useState(false)
 
   let runningIndex = 0
   const numberedGroups = groups.map((g) => {
@@ -29,6 +27,18 @@ export default function PackageSummary({ groups = [], onRemove, businessType }) 
     runningIndex += g.items.length
     return { ...g, startIndex }
   })
+
+  const rows = numberedGroups.flatMap((g) =>
+    g.items.map((it) => ({
+      contract: it.contract,
+      regular: (it.contract === 'buy' ? it.buyPrice || 0 : it.monthly48 || 0) * (it.qty || 1),
+      discount: discounts.items[it.id] || null
+    }))
+  )
+  const sum = summarizeRows(rows, discounts.total)
+  const hasRows = rows.length > 0
+  const totalDiscMonthly = sum.totalDiscountMonthly
+  const totalDiscBuy = sum.totalDiscountBuy
 
   return (
     <section className="pkg-step pkg-summary" aria-label="Paketöversikt">
@@ -60,6 +70,13 @@ export default function PackageSummary({ groups = [], onRemove, businessType }) 
               {group.items.map((item, itemIndex) => {
                 const qty = item.qty || 1
                 const itemNumber = (group.startIndex || 0) + itemIndex + 1
+                const isBuy = item.contract === 'buy'
+                const regular = (isBuy ? item.buyPrice || 0 : item.monthly48 || 0) * qty
+                const d = discounts.items[item.id] || null
+                const amount = discountAmount(regular, d)
+                const finalPrice = regular - amount
+                const suffix = isBuy ? '' : '/mån'
+                const editing = editingId === item.id
                 return (
                   <li key={item.id} className="pkg-summary-item">
                     <div className="pkg-summary-row">
@@ -77,16 +94,41 @@ export default function PackageSummary({ groups = [], onRemove, businessType }) 
                       </button>
                     </div>
                     <div className="pkg-summary-meta">
-                      {item.contract === 'buy' ? (
-                        <span className="pkg-summary-price">
-                          Direktköp · {formatPrice(item.buyPrice * qty)}
-                        </span>
-                      ) : (
-                        <span className="pkg-summary-price">
-                          48 mån · {formatPrice(item.monthly48 * qty, '/mån')}
-                        </span>
-                      )}
+                      <span className={`pkg-summary-price${d ? ' has-discount' : ''}`}>
+                        {d ? (
+                          <>
+                            <s>{formatPrice(regular, suffix)}</s>
+                            <strong>{formatPrice(finalPrice, suffix)}</strong>
+                            <span className="disc-tag">{discountLabel(d)}</span>
+                          </>
+                        ) : (
+                          <>
+                            {isBuy ? 'Direktköp · ' : '48 mån · '}
+                            {formatPrice(regular, suffix)}
+                          </>
+                        )}
+                      </span>
+                      <DiscountButton
+                        active={editing}
+                        onClick={() => setEditingId(editing ? null : item.id)}
+                        title={`Rabatt på ${item.name || item.id}`}
+                      />
                     </div>
+                    {editing && (
+                      <DiscountEditor
+                        initial={d}
+                        unit={isBuy ? 'kr' : 'kr/mån'}
+                        onSave={(disc) => {
+                          if (onItemDiscount) onItemDiscount(item.id, disc)
+                          setEditingId(null)
+                        }}
+                        onCancel={() => setEditingId(null)}
+                        onClear={() => {
+                          if (onItemDiscount) onItemDiscount(item.id, null)
+                          setEditingId(null)
+                        }}
+                      />
+                    )}
                   </li>
                 )
               })}
@@ -95,18 +137,84 @@ export default function PackageSummary({ groups = [], onRemove, businessType }) 
         ))
       )}
 
-      {(totals.buy > 0 || totals.monthly > 0) && (
+      {hasRows && (
         <div className="pkg-summary-totals">
-          {totals.buy > 0 && (
+          {sum.regularMonthly > 0 && (
             <div className="pkg-summary-total">
-              <span className="pkg-summary-total-label">Direktköp totalt</span>
-              <strong className="pkg-summary-total-value">{formatPrice(totals.buy)}</strong>
+              <span className="pkg-summary-total-label">Summa ordinarie</span>
+              <span className="pkg-summary-total-value">{formatPrice(sum.regularMonthly, '/mån')}</span>
             </div>
           )}
-          {totals.monthly > 0 && (
+          {sum.rowDiscountMonthly > 0 && (
+            <div className="pkg-summary-total is-discount">
+              <span className="pkg-summary-total-label">Radrabatter</span>
+              <span className="pkg-summary-total-value">−{formatPrice(sum.rowDiscountMonthly, '/mån')}</span>
+            </div>
+          )}
+
+          {discounts.total && !editingTotal ? (
+            <div className="pkg-summary-total is-discount">
+              <span className="pkg-summary-total-label">
+                Totalrabatt
+                <button
+                  type="button"
+                  className="disc-edit-link"
+                  onClick={() => setEditingTotal(true)}
+                  aria-label="Ändra totalrabatt"
+                >
+                  Ändra
+                </button>
+                <button
+                  type="button"
+                  className="disc-edit-link is-clear"
+                  onClick={() => onTotalDiscount && onTotalDiscount(null)}
+                >
+                  Ta bort
+                </button>
+              </span>
+              <span className="pkg-summary-total-value">
+                −{formatPrice(totalDiscMonthly > 0 ? totalDiscMonthly : totalDiscBuy, totalDiscMonthly > 0 ? '/mån' : '')}
+              </span>
+            </div>
+          ) : (
+            !editingTotal && (
+              <button type="button" className="disc-add-link" onClick={() => setEditingTotal(true)}>
+                + Lägg till totalrabatt
+              </button>
+            )
+          )}
+
+          {editingTotal && (
+            <DiscountEditor
+              initial={discounts.total}
+              unit="kr/mån"
+              onSave={(disc) => {
+                if (onTotalDiscount) onTotalDiscount(disc)
+                setEditingTotal(false)
+              }}
+              onCancel={() => setEditingTotal(false)}
+              onClear={() => {
+                if (onTotalDiscount) onTotalDiscount(null)
+                setEditingTotal(false)
+              }}
+            />
+          )}
+
+          {sum.regularMonthly > 0 && (
+            <div className="pkg-summary-total is-final">
+              <span className="pkg-summary-total-label">Slutgiltigt månadspris</span>
+              <strong className="pkg-summary-total-value">{formatPrice(sum.finalMonthly, '/mån')}</strong>
+            </div>
+          )}
+          {sum.regularBuy > 0 && (
             <div className="pkg-summary-total">
-              <span className="pkg-summary-total-label">48 mån totalt</span>
-              <strong className="pkg-summary-total-value">{formatPrice(totals.monthly, '/mån')}</strong>
+              <span className="pkg-summary-total-label">Engångsköp</span>
+              <span className="pkg-summary-total-value">
+                {sum.finalBuy < sum.regularBuy && (
+                  <s className="disc-old">{formatPrice(sum.regularBuy)}</s>
+                )}
+                <strong>{formatPrice(sum.finalBuy)}</strong>
+              </span>
             </div>
           )}
         </div>

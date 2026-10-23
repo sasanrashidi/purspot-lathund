@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { resolveRules } from './rules'
 import { reconcileSelection, getDefaultMode, sortDevicesByRole, groupSelection } from './logic'
+import { normalizeDiscounts } from './discounts'
 import { devices as deviceCatalog } from '../data'
 import BusinessSelector from './BusinessSelector'
 import DevicePicker from './DevicePicker'
@@ -62,12 +63,14 @@ export default function PackageBuilder({ loadFor, onLoadHandled }) {
     return migrated
   })
   const [contracts, setContracts] = useState(() => pkgLoad('contracts', {}))
+  const [discounts, setDiscounts] = useState(() => normalizeDiscounts(pkgLoad('discounts', null)))
   const [linkedCustomerId, setLinkedCustomerId] = useState(() => pkgLoad('linkedCustomerId', ''))
 
   useEffect(() => pkgSave('businessId', businessId), [businessId])
   useEffect(() => pkgSave('selected', selected), [selected])
   useEffect(() => pkgSave('quantities', quantities), [quantities])
   useEffect(() => pkgSave('contracts', contracts), [contracts])
+  useEffect(() => pkgSave('discounts', discounts), [discounts])
   useEffect(() => pkgSave('linkedCustomerId', linkedCustomerId), [linkedCustomerId])
 
   // Ladda ett kundpaket ("Öppna i Paketbyggare" från Kundregistret).
@@ -81,6 +84,7 @@ export default function PackageBuilder({ loadFor, onLoadHandled }) {
       setSelected(res.selection)
       setQuantities(pd.quantities || {})
       setContracts(pd.contracts || {})
+      setDiscounts(normalizeDiscounts(pd.discounts))
     }
     if (loadFor.id) setLinkedCustomerId(loadFor.id)
     if (onLoadHandled) onLoadHandled()
@@ -107,6 +111,13 @@ export default function PackageBuilder({ loadFor, onLoadHandled }) {
         if (res.selection[id] !== undefined) next[id] = prev[id]
       }
       return next
+    })
+    setDiscounts((prev) => {
+      const nextItems = {}
+      for (const id of Object.keys(prev.items || {})) {
+        if (res.selection[id] !== undefined) nextItems[id] = prev.items[id]
+      }
+      return { items: nextItems, total: prev.total }
     })
   }
 
@@ -174,6 +185,21 @@ export default function PackageBuilder({ loadFor, onLoadHandled }) {
     setContracts((prev) => ({ ...prev, [deviceId]: contract }))
   }
 
+  // 2f. Sätt/ta bort rad-rabatt för en enhet (null tar bort rabatten).
+  function handleItemDiscount(deviceId, discount) {
+    setDiscounts((prev) => {
+      const items = { ...prev.items }
+      if (discount) items[deviceId] = discount
+      else delete items[deviceId]
+      return { ...prev, items }
+    })
+  }
+
+  // 2g. Sätt/ta bort totalrabatt på hela paketet (null tar bort).
+  function handleTotalDiscount(discount) {
+    setDiscounts((prev) => ({ ...prev, total: discount }))
+  }
+
   const selectedCount = Object.keys(selected).length
   const orderedIds = sortDevicesByRole(rules, Object.keys(selected))
   const deviceById = {}
@@ -224,6 +250,9 @@ export default function PackageBuilder({ loadFor, onLoadHandled }) {
           groups={groups}
           businessType={businessMeta}
           onRemove={handleRemove}
+          discounts={discounts}
+          onItemDiscount={handleItemDiscount}
+          onTotalDiscount={handleTotalDiscount}
         />
 
         <SaveToCustomer
@@ -231,6 +260,7 @@ export default function PackageBuilder({ loadFor, onLoadHandled }) {
           selected={selected}
           quantities={quantities}
           contracts={contracts}
+          discounts={discounts}
           linkedCustomerId={linkedCustomerId}
           onLinkedCustomerChange={setLinkedCustomerId}
         />

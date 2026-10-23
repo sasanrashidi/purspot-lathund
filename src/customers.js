@@ -52,6 +52,25 @@ export function customerFullName(customer) {
   return full || customer.name || ''
 }
 
+// Mask för organisationsnummer: endast siffror, max 10 siffror och
+// bindestreck automatiskt efter 6:e siffran (556800-1234).
+// `prev` är det aktuella fältvärdet – används för att hantera
+// backspace "fastnat" på bindestrecket: raderas bara strecket
+// tolkas det som att användaren vill radera en siffra.
+export function formatOrgNumber(value, prev = '') {
+  const next = String(value == null ? '' : value)
+  let digits = next.replace(/\D/g, '')
+  const prevDigits = String(prev == null ? '' : prev).replace(/\D/g, '')
+  // Backspace "fastnade" på bindestrecket (samma siffror kvar men ett
+  // tecken kortare): tolka som önskad radering av senaste siffran.
+  if (next.length < prev.length && digits.length > 0 && digits === prevDigits) {
+    digits = digits.slice(0, -1)
+  }
+  digits = digits.slice(0, 10)
+  if (digits.length <= 6) return digits
+  return digits.slice(0, 6) + '-' + digits.slice(6)
+}
+
 function loadFromLocal() {
   try {
     const raw = window.localStorage.getItem(CUSTOMERS_KEY)
